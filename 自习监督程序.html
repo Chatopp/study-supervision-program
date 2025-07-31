@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>自习监督小程序</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- Google Font + FontAwesome -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+<style>
+/* --- CSS Variables --- */
+:root {
+  --primary: #007aff; /* iOS Blue */
+  --secondary: #5ac8fa; /* iOS Light Blue */
+  --bg-red: #ff3b30; /* iOS Red */
+  --bg-green: #34c759; /* iOS Green */
+  --bg-yellow: #ffcc00; /* iOS Yellow */
+  --bg-orange: #ff9500; /* iOS Orange */
+  --text-color: #1c1c1e; /* iOS Dark Text */
+  --text-color-light: #8e8e93; /* iOS Gray Text */
+  --glass-bg: rgba(242, 242, 247, 0.8); /* iOS-like translucent material (light mode) */
+  --card-border-color: rgba(60, 60, 67, 0.29); /* Subtle border for cards */
+  --separator-color: rgba(60, 60, 67, 0.29); /* Separator line color */
+  --card-scale: 1.2; /* Card overall scaling */
+  --plant-green-dark: #16a34a; --plant-green-light: #4ade80; --plant-quiet-glow-color: rgba(52, 199, 89, 0.4); --plant-success-glow-color: rgba(0, 122, 255, 0.5); --plant-drink-color: #047857; --ground-green-dark: #65a30d; --ground-green-light: #a3e635; --completed-tree-green-dark: #065f46; --completed-tree-green-light: #10b981; --completed-rock-color-dark: #71717a; --completed-rock-color-light: #a1a1aa; --completed-flower-color-dark: #e11d48; --completed-flower-color-light: #f472b6; --snack-color-yellow: #ffcc00; --snack-color-red: #ff3b30; --snack-color-pink: #ff2d55; --snack-color-blue: #007aff; --snack-color-green: #34c759; --background-hue-shift: 0; --background-lightness-add: 0; --background-saturation-mult: 1;
+  --wiggle-duration: 400ms; --noise-shake-duration: 200ms; --drink-animation-duration: 500ms; --success-glow-duration: 800ms; --indicator-duration: 1200ms; --grow-in-duration: 800ms; --reward-duration: 1500ms; --star-splash-duration: 1200ms; --alert-flash-duration: 300ms; --streak-animation-duration: 1000ms; --quiet-glow-duration: 1500ms; --snack-float-duration: 1800ms; --water-droplet-duration: 1800ms;
+  --ground-height-percent: 30%; --plant-base-offset-from-ground: 10px;
+  --cached-wiggle-duration: 400; --cached-noise-shake-duration: 200; --cached-drink-animation-duration: 500; --cached-success-glow-duration: 800; --cached-indicator-duration: 1200; --cached-grow-in-duration: 800; --cached-reward-duration: 1500; --cached-star-splash-duration: 1200; --cached-alert-flash-duration: 300; --cached-streak-animation-duration: 1000; --cached-quiet-glow-duration: 1500; --cached-snack-float-duration: 1800; --cached-water-droplet-duration: 1800;
+  --ios-control-bg: #ffffff; --ios-control-border: #c6c6c8; --ios-control-active-bg: #e5e5ea;
+
+  /* Day/Night Cycle Variables - Default to Day */
+  --sky-gradient-top: #87CEEB; /* Light Sky Blue */
+  --sky-gradient-middle: #B0E0E6; /* Powder Blue */
+  --sky-gradient-bottom: #ADD8E6; /* Lighter Blue */
+  --sun-moon-color: #FFD700; /* Gold (Sun) */
+  --sun-moon-glow: rgba(255, 215, 0, 0.5);
+  --celestial-object-opacity: 1;
+  --celestial-object-top: 10%;
+  --celestial-object-left: 75%;
+  --ambient-light-filter: brightness(1);
+  --ground-tint-overlay: rgba(255, 255, 255, 0.05);
+  --stars-opacity: 0;
+}
+* { box-sizing: border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f0f0f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; color: var(--text-color); padding: 1.5rem; /* ---OPTIMIZATION: Increased padding for more breathing room --- */ overflow-y: auto; transition: background 0.8s ease-out, background-image 0.8s ease-out, color 0.5s ease-out; }
+body.resizing { user-select: none; cursor: grabbing !important; }
+#wrapper { transform: scale(var(--card-scale)); transition: transform 0.2s ease-out; transform-origin: center center; width: 100%; max-width: 98vw; display: flex; flex-direction: row; gap: 1.5rem; /* ---OPTIMIZATION: Increased gap for better card separation --- */ align-items: stretch; justify-content: center; border: 1px solid transparent; transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out; min-height: calc(100vh - 3rem); }
+#wrapper.alert { animation: none; }
+.card-base { background: var(--glass-bg); backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%); border-radius: 18px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07), 0 0 0 0.5px var(--card-border-color); padding: 1.5rem; /* ---OPTIMIZATION: Standardized padding --- */ text-align: center; display: flex; flex-direction: column; overflow: hidden; transition: background 0.5s ease-out, box-shadow 0.5s ease-out, border-color 0.5s ease-out; position: relative; flex-grow: 1; flex-shrink: 1; flex-basis: calc(33.333% - 1.5rem); min-width: 300px; }
+#notification-board-card { order: 1; min-height: 400px; overflow-y: auto; }
+#monitoring-card { order: 2; min-height: 400px; }
+#monitoring-card #controls { overflow-y: auto; max-height: calc(100% - 150px); }
+#plant-card { order: 3; min-height: 400px; }
+
+#plantArea {
+  margin: 0; width: 100%; height: 100%;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 1.5rem; /* ---OPTIMIZATION: Standardized padding --- */
+  padding-bottom: calc(1.5rem + var(--ground-height-percent));
+  position: relative; text-align: center; overflow: hidden; user-select: none;
+  background: linear-gradient(to bottom, 
+    var(--sky-gradient-top), 
+    var(--sky-gradient-middle, var(--sky-gradient-bottom)), 
+    var(--sky-gradient-bottom)
+  );
+  transition: background 1.5s ease-out;
+  contain: layout style paint;
+}
+#celestialObject {
+  position: absolute;
+  top: var(--celestial-object-top);
+  left: var(--celestial-object-left);
+  transform: translateX(-50%);
+  width: 50px;
+  height: 50px;
+  background-color: var(--sun-moon-color);
+  border-radius: 50%;
+  box-shadow: 0 0 25px 8px var(--sun-moon-glow);
+  opacity: var(--celestial-object-opacity);
+  transition: background-color 1.5s ease-out, box-shadow 1.5s ease-out, 
+              opacity 1.5s ease-out, top 2s ease-out, left 2s ease-out;
+  z-index: 0;
+}
+#starsOverlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 70%;
+    pointer-events: none;
+    opacity: var(--stars-opacity);
+    transition: opacity 1.5s ease-out;
+    z-index: 0;
+    overflow: hidden;
+}
+.star {
+    position: absolute;
+    background-color: white;
+    border-radius: 50%;
+    animation: twinkle 2s infinite alternate ease-in-out;
+}
+@keyframes twinkle {
+    0% { opacity: 0.5; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1.2); }
+}
+
+
+#plantArea::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 18px; pointer-events: none; z-index: 0; box-shadow: 0 0 var(--quiet-glow-spread, 0px) var(--quiet-glow-blur, 0px) var(--plant-quiet-glow-color); transition: box-shadow 0.3s ease-out; animation: quiet-glow-pulse var(--cached-quiet-glow-duration, 1500ms) ease-in-out infinite alternate; animation-play-state: paused;}
+#plantArea.quiet-glow::before { animation-play-state: running; } #plantArea:not(.quiet-glow)::before { box-shadow: none; animation: none; }
+@keyframes quiet-glow-pulse { 0% { box-shadow: 0 0 var(--quiet-glow-spread, 0px) var(--quiet-glow-blur, 0px) var(--plant-quiet-glow-color); } 100% { box-shadow: 0 0 calc(var(--quiet-glow-spread, 0px) * 1.2) calc(var(--quiet-glow-blur, 0px) * 1.2) var(--plant-quiet-glow-color); }}
+
+#ground {
+  position: absolute; bottom: 0; left: 0; width: 100%;
+  height: var(--ground-height-percent);
+  background: linear-gradient(to top, var(--ground-green-dark), var(--ground-green-light));
+  border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;
+  z-index: 1; pointer-events: none;
+  transition: background 0.5s ease-out;
+}
+#ground::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--ground-tint-overlay, transparent);
+  border-bottom-left-radius: 16px; 
+  border-bottom-right-radius: 16px;
+  transition: background-color 1.5s ease-out;
+  z-index: 1;
+}
+
+
+@media (max-width: 1200px) { #wrapper { flex-wrap: wrap; align-items: flex-start; } .card-base { flex-basis: calc(50% - 0.75rem); } #notification-board-card { flex-basis: 100%; order: 1; } #monitoring-card { order: 2; } #plant-card { order: 3; }}
+@media (max-width: 768px) { .card-base { flex-basis: 100%; min-width: auto; margin-bottom: 1.5rem; } #notification-board-card, #monitoring-card, #plant-card { order: unset; }}
+#notificationHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 1rem; /* ---OPTIMIZATION: Increased space --- */ min-height: 1.5em; padding-bottom: 1rem; /* ---OPTIMIZATION: Increased space --- */ border-bottom: 0.5px solid var(--separator-color); transition: border-color 0.5s ease-out;}
+#notificationHeader h3 { margin: 0; font-size: 1.1rem; font-weight: 700; /* ---OPTIMIZATION: Bolder for better hierarchy --- */ transition: color 0.5s ease-out;}
+#notificationHeader #timeInfo { font-size: 1.6rem; font-weight: 700; margin-left: auto; margin-right: 0.25rem; padding: 0.3rem 0.8rem; color: var(--primary); background-color: color-mix(in srgb, var(--primary) 10%, transparent); border-radius: 8px; text-align: right; line-height: 1.2; transition: color 0.5s ease-out, background-color 0.5s ease-out;}
+#notificationHeader #timeInfo strong { font-weight: 700; color: var(--primary); transition: color 0.5s ease-out;}
+#notificationAreaWrapper { flex-grow: 1; display: flex; margin-bottom: 1rem;}
+.notification-textarea { flex: 1 1 100%; min-height: 150px; border: 0.5px solid var(--card-border-color); outline: none; background: var(--note-bg-color, rgba(255, 255, 255, 0.9)); color: var(--note-text-color, var(--text-color)); font-family: var(--note-font-family, inherit); font-size: var(--note-font-size, 0.95rem); padding: 0.75rem; border-radius: 10px; resize: vertical; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03); line-height: 1.5; transition: background-color 0.3s ease, color 0.3s ease, font-size 0.3s ease, border-color 0.3s ease; margin-bottom: 0;}
+.notification-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);}
+#notificationSettings { display: flex; flex-wrap: wrap; gap: 1rem; /* ---OPTIMIZATION: Increased gap --- */ align-items: center; justify-content: center; flex-shrink: 0; padding-top: 1rem; border-top: 0.5px solid var(--separator-color); transition: border-color 0.5s ease-out;}
+#notificationSettings label { font-size: 0.9rem; display: inline-flex; align-items: center; color: var(--text-color-light); transition: color 0.5s ease-out;}
+/* ---OPTIMIZATION: Added custom arrow for select elements --- */
+#notificationSettings select, #plantSelector {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%238E8E93' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25em 1.25em;
+    padding-right: 2.25rem;
+}
+#notificationSettings select, #notificationSettings input[type="color"] { margin-left: 0.5rem; padding: 0.4rem 0.6rem; border: 0.5px solid var(--ios-control-border); background-color: var(--ios-control-bg); border-radius: 8px; font-size: 0.9rem; color: var(--text-color); box-shadow: 0 1px 1px rgba(0,0,0,0.03); cursor: pointer; }
+#notificationSettings input[type="color"] { width: 30px; height: 30px; padding: 2px; }
+#notificationSettings input[type="range"] { width: 100px; height: 4px; background: #d1d1d6; outline: none; cursor: pointer; vertical-align: middle; margin-left: 0.5rem; -webkit-appearance: none; border-radius: 2px;}
+#notificationSettings input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--ios-control-bg); border: 0.5px solid var(--ios-control-border); box-shadow: 0 1px 3px rgba(0,0,0,0.15);}
+#notificationSettings input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--ios-control-bg); border: 0.5px solid var(--ios-control-border); box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+#fontSizeVal { font-weight: 600; font-size: 0.9rem; color: var(--primary); min-width: 30px; text-align: center; vertical-align: middle; margin-left: 0.25rem; transition: color 0.5s ease-out;}
+h1 { margin: 0 0 1.25rem; font-size: 1.5rem; font-weight: 700; /* ---OPTIMIZATION: Bolder for emphasis --- */ letter-spacing: 0.01em; transition: color 0.5s ease-out; text-shadow: 0 1px 2px rgba(0,0,0,0.04); /* ---OPTIMIZATION: Subtle shadow for depth --- */ }
+#meterContainer { position: relative; width: 100%; height: 8px; background: #e5e5ea; border-radius: 4px; overflow: hidden; box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.05);}
+#meterBar { position: absolute; left: 0; top: 0; height: 100%; width: 1%; background: var(--bg-green); transition: width 0.05s ease-out, background 0.2s; border-radius: 4px;}
+#meterBar.above-threshold { background: var(--bg-yellow); } #meterBar.below-quiet-threshold { background: var(--bg-green); } #meterBar.above-alert-threshold { background: var(--bg-orange); }
+#meterBar.pulse { animation: pulse-meter 0.3s ease-out; } @keyframes pulse-meter { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+#levelText { margin: 0.75rem 0 1.25rem; /* ---OPTIMIZATION: Increased bottom margin --- */ font-size: 1.1rem; font-weight: 500; min-height: 1.5em; color: var(--text-color); transition: color 0.5s ease-out;}
+/* ---OPTIMIZATION: Replaced flexbox with a responsive grid for a cleaner, more organized layout --- */
+#controls {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+#controls button {
+    width: 100%; /* Make buttons fill grid cells */
+}
+#controls #resetBtn {
+    grid-column: 1 / -1; /* Make reset button full-width */
+}
+button { padding: 0.65rem 1.25rem; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 600; /* ---OPTIMIZATION: Bolder text --- */ cursor: pointer; color: #fff; background: var(--primary); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 0.5px rgba(0,0,0,0.03); transition: transform 0.1s ease, background-color 0.15s ease, box-shadow 0.15s ease;}
+button:hover:not(:disabled) { transform: translateY(-1px); background-color: color-mix(in srgb, var(--primary) 90%, black); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), 0 0 0 0.5px rgba(0,0,0,0.03);}
+button:active:not(:disabled) { transform: translateY(0); background-color: color-mix(in srgb, var(--primary) 80%, black);}
+button:disabled { background: #d1d1d6; color: #8e8e93; cursor: not-allowed; box-shadow: none;}
+#resetBtn { background: var(--bg-red); order: 99; } #resetBtn:hover:not(:disabled) { background: color-mix(in srgb, var(--bg-red) 90%, black); } #resetBtn:active:not(:disabled) { background: color-mix(in srgb, var(--bg-red) 80%, black); } #resetBtn:disabled { background: color-mix(in srgb, var(--bg-red) 70%, white); color: color-mix(in srgb, var(--bg-red) 90%, white); }
+/* ---OPTIMIZATION: Improved label layout for sliders in the grid --- */
+#controls label {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.25rem 0.75rem;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-color-light);
+    text-align: left;
+    transition: color 0.5s ease-out;
+}
+#controls label span:first-of-type { /* The label text */
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+}
+#controls label input[type="range"] {
+    grid-column: 1 / -1; /* Span full width below labels */
+    grid-row: 2 / 3;
+    width: 100%;
+}
+#controls .slider-value {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    justify-self: end; /* Align to the right */
+}
+input[type="range"] { -webkit-appearance: none; width: 140px; height: 4px; border-radius: 2px; background: #d1d1d6; outline: none; cursor: pointer;}
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--ios-control-bg); border: 0.5px solid var(--ios-control-border); box-shadow: 0 1px 3px rgba(0,0,0,0.15);}
+input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--ios-control-bg); border: 0.5px solid var(--ios-control-border); box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+.slider-value { font-weight: 600; /* ---OPTIMIZATION: Bolder value --- */ font-size: 0.95rem; color: var(--primary); min-width: 40px; /* ---OPTIMIZATION: More space --- */ text-align: center; transition: color 0.5s ease-out;}
+#errorMsg { color: var(--bg-red); margin-top: 1rem; min-height: 1.4em; white-space: pre-line; font-size: 0.85rem; line-height: 1.35;}
+#alertMessage { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.75); backdrop-filter: blur(10px) saturate(180%); -webkit-backdrop-filter: blur(10px) saturate(180%); color: white; padding: 0.8rem 1.5rem; border-radius: 14px; font-size: 1.1rem; font-weight: 500; z-index: 10; pointer-events: none; opacity: 0; transition: opacity 0.25s ease-out, transform 0.25s ease-out; box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
+#alertMessage.visible { opacity: 1; transform: translate(-50%, -50%) scale(1); } #alertMessage:not(.visible) { transform: translate(-50%, -50%) scale(0.9); }
+#rewardArea, #snackRewardArea { position: absolute; top: 0; left: 0; right: 0; bottom: var(--ground-height-percent); padding: 1.25rem 1.5rem; z-index: 1; pointer-events: none; overflow: hidden;}
+#snackRewardArea { z-index: 2; }
+#plantWrapper { position: absolute; bottom: 1.25rem; left: 0; width: 100%; z-index: 2; text-align: center; pointer-events: none; display: flex; flex-direction: column; gap: 0.5rem; align-items: center; justify-content: center; padding: 0 1rem; box-sizing: border-box;}
+.plant-info-row { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: center; justify-content: center;}
+#plantSelectorContainer { margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-color-light); }
+#plantSelectorContainer label { margin-right: 0.5rem; }
+#plantSelector { padding: 0.4rem 0.6rem; border: 0.5px solid var(--ios-control-border); background-color: var(--ios-control-bg); border-radius: 8px; font-size: 0.9rem; color: var(--text-color); box-shadow: 0 1px 1px rgba(0,0,0,0.03); cursor: pointer; }
+
+.info-block { font-size: 0.85rem; color: var(--text-color-light); flex-shrink: 0; text-shadow: 0 0.5px 1px rgba(255,255,255,0.2); transition: color 0.5s ease-out;}
+.info-block strong { font-weight: 600; color: var(--text-color); transition: color 0.5s ease-out;}
+#plantIconContainer { position: absolute; left: 50%; bottom: calc(var(--ground-height-percent) + var(--plant-base-offset-from-ground)); transform: translateX(-50%); display: flex; align-items: center; justify-content: center; z-index: 3; pointer-events: none; filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.2));}
+
+#plantIcon {
+    width: 150px; height: 200px; display: block; overflow: visible;
+    transform: scale(var(--current-plant-scale, 1));
+    transform-origin: bottom center;
+    transition: transform 0.6s cubic-bezier(0.4, 2.5, 0.6, 1), filter 0.3s ease-out, opacity 0.3s ease-out;
+    will-change: transform, filter, opacity;
+    pointer-events: auto;
+    filter: var(--ambient-light-filter, none);
+}
+#plantIcon.is-icon-type { }
+#plantIcon foreignObject {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    overflow: visible;
+}
+#plantIcon foreignObject i.fa-plant-icon {
+    font-size: 80px; 
+    line-height: 1;
+    display: block;
+    transition: color 0.3s ease-out, transform 0.3s ease-out;
+    transform-origin: center center;
+}
+
+
+#plantIcon.drinking { transform: scale(calc(var(--current-plant-scale, 1) * 1.05)); transition: transform var(--drink-animation-duration) ease-out, filter var(--drink-animation-duration) ease-out;}
+#plantIconContainer::after { content: ''; position: absolute; top: 50%; left: 50%; width: 90px; height: 90px; transform: translate(-50%, -50%); border-radius: 50%; background-color: var(--plant-success-glow-color); opacity: 0; pointer-events: none; z-index: -1; filter: blur(25px);}
+#plantIconContainer.success-glow::after { animation: success-glow-pulse var(--success-glow-duration) ease-out forwards; } @keyframes success-glow-pulse { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0.7; } 100% { transform: translate(-50%, -50%) scale(1.3); opacity: 0; }}
+#plantIcon.noise-shake { animation: noise-shake var(--noise-shake-duration) ease-in-out infinite alternate; } @keyframes noise-shake { 0%, 100% { transform: scale(var(--current-plant-scale, 1)) translateX(0px) rotate(0deg); } 25% { transform: scale(var(--current-plant-scale, 1)) translateX(-1px) rotate(-0.8deg); } 75% { transform: scale(var(--current-plant-scale, 1)) translateX(1px) rotate(0.8deg); }}
+#plantIcon.wiggle { animation: wiggle var(--wiggle-duration) ease-in-out; } @keyframes wiggle { 0%, 100% { transform: scale(var(--current-plant-scale, 1)) rotate(0deg); } 25% { transform: scale(var(--current-plant-scale, 1)) rotate(-2.5deg); } 75% { transform: scale(var(--current-plant-scale, 1)) rotate(2.5deg); }}
+.completed-item { position: absolute; color: transparent; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.25)); z-index: 1; pointer-events: none; transform-origin: bottom center; opacity: 0; will-change: transform, opacity; --final-rotation: 0deg; --initial-random-rotation: 0deg;}
+.completed-item.grow-in { animation: grow-in var(--grow-in-duration) cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards; } @keyframes grow-in { 0% { opacity: 0; transform: scale(0) rotate(var(--initial-random-rotation, 0deg)); } 80% { opacity: 1; transform: scale(1.0) rotate(var(--final-rotation, 0deg)); } 100% { opacity: 1; transform: scale(1.0) rotate(var(--final-rotation, 0deg)); }}
+.completed-item.type-tree { background: linear-gradient(to top, var(--completed-tree-green-dark), var(--completed-tree-green-light)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.25)); } .completed-item.type-rock { background: linear-gradient(to top, var(--completed-rock-color-dark), var(--completed-rock-color-light)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0.5px 0.5px 1px rgba(0, 0, 0, 0.15)); } .completed-item.type-flower { background: linear-gradient(to top, var(--completed-flower-color-dark), var(--completed-flower-color-light)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.1)); transform-origin: center bottom; }
+.snack-reward { position: absolute; font-size: 1.6rem; color: var(--snack-color-yellow); text-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.08); pointer-events: none; will-change: transform, opacity;}
+.snack-reward.float-fade { animation: float-up-fade-out-snack var(--snack-float-duration) ease-out forwards; --float-distance-y: -40px; --rotate-end: 360deg;} @keyframes float-up-fade-out-snack { 0% { transform: translate(-50%, -50%) rotate(0deg); opacity: 1; } 80% { transform: translate(-50%, calc(-50% + var(--float-distance-y, -40px))) rotate(var(--rotate-end, 360deg)); opacity: 1; } 100% { transform: translate(-50%, calc(-50% + var(--float-distance-y, -40px) * 1.2)) rotate(var(--rotate-end, 360deg)); opacity: 0; }}
+.water-droplet { position: absolute; font-size: 1.4rem; color: var(--snack-color-blue); text-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.08); pointer-events: none; will-change: transform, opacity;}
+.water-droplet.float-fade { animation: float-up-fade-out-droplet var(--water-droplet-duration) ease-out forwards; } @keyframes float-up-fade-out-droplet { 0% { transform: translate(-50%, -50%) translateY(0px) scale(1); opacity: 1; } 50% { transform: translate(-50%, -50%) translateY(-25px) scale(1.05); opacity: 1; } 100% { transform: translate(-50%, -50%) translateY(-50px) scale(0.85); opacity: 0; }}
+.starSplash { position: absolute; font-size: 1.4rem; color: #ffcc00; animation: star-drop var(--star-splash-duration) ease-out forwards; pointer-events: none; z-index: 4; will-change: transform, opacity; text-shadow: 0 0 4px rgba(255,204,0,0.5);} @keyframes star-drop { 0% { transform: translate(-50%, -15px) scale(0.5) rotate(0deg); opacity: 1; } 30% { transform: translate(-50%, 0px) scale(1) rotate(90deg); } 70% { transform: translate(-50%, 30px) scale(1.1) rotate(180deg); opacity: 1; } 100% { transform: translate(-50%, 50px) scale(0.5) rotate(270deg); opacity: 0; }}
+.quiet-indicator { position: absolute; font-size: 1.05rem; font-weight: 500; color: var(--primary); white-space: nowrap; pointer-events: none; animation: float-up-fade var(--indicator-duration) ease-out forwards; z-index: 4; will-change: transform, opacity; text-shadow: 0 0.5px 1px rgba(0,0,0,0.08);} @keyframes float-up-fade { 0% { transform: translate(-50%, 0); opacity: 1; } 70% { transform: translate(-50%, -40px); opacity: 1; } 100% { transform: translate(-50%, -70px); opacity: 0; }}
+.reward-particle { position: absolute; font-size: 1.3rem; color: var(--completed-tree-green-light); pointer-events: none; animation: rain-down-fade var(--reward-duration) ease-in forwards; z-index: 3; will-change: transform, opacity; text-shadow: 0 0 3px rgba(0, 0, 0, 0.08);} @keyframes rain-down-fade { 0% { transform: translate(0, 0) rotate(0deg); opacity: 1; } 100% { transform: translate(var(--fall-distance-x, 0px), var(--fall-distance-y, 100px)) rotate(var(--end-rotation, 360deg)); opacity: 0; }}
+.streak-bonus { position: absolute; font-size: 1.7rem; font-weight: 600; color: var(--bg-orange); white-space: nowrap; pointer-events: none; z-index: 5; animation: pop-and-fade-up var(--streak-animation-duration) ease-out forwards; will-change: transform, opacity; text-shadow: 0.5px 0.5px 2px rgba(0,0,0,0.15);} @keyframes pop-and-fade-up { 0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; } 20% { transform: translate(-50%, -15px) scale(1.15); opacity: 1; } 80% { transform: translate(-50%, -50px) scale(1.05); opacity: 1; } 100% { transform: translate(-50%, -90px) scale(0.8); opacity: 0; }}
+footer { margin-top: 1.25rem; font-size: 0.8rem; color: #636366; flex-shrink: 0; transition: color 0.5s ease-out;}
+#plantIcon.growing { animation: grow-smoothly 1.5s ease-out forwards; } @keyframes grow-smoothly { 0% { opacity: 0.7; filter: brightness(0.8) var(--ambient-light-filter, none); } 60% { opacity: 1; filter: brightness(1.1) var(--ambient-light-filter, none); } 100% { opacity: 1; filter: brightness(1) var(--ambient-light-filter, none); }}
+#plantIcon.blooming { animation: bloom-flash 1.5s ease-out forwards; } @keyframes bloom-flash { 0% { transform: scale(var(--current-plant-scale, 1)); filter: brightness(1) var(--ambient-light-filter, none); } 50% { transform: scale(calc(var(--current-plant-scale, 1) * 1.05)); filter: brightness(1.2) hue-rotate(-8deg) var(--ambient-light-filter, none); } 100% { transform: scale(var(--current-plant-scale, 1)); filter: brightness(1) var(--ambient-light-filter, none); }}
+
+@keyframes milestone-growth-pulse {
+  0% { transform: scale(var(--current-plant-scale, 1)) rotate(0deg); filter: brightness(1) var(--ambient-light-filter, none); }
+  30% { transform: scale(calc(var(--current-plant-scale, 1) * 1.1)) rotate(0deg); filter: brightness(1.3) hue-rotate(-10deg) var(--ambient-light-filter, none); }
+  70% { transform: scale(calc(var(--current-plant-scale, 1) * 1.05)) rotate(0deg); filter: brightness(1.15) var(--ambient-light-filter, none); }
+  100% { transform: scale(var(--current-plant-scale, 1)) rotate(0deg); filter: brightness(1) var(--ambient-light-filter, none); }
+}
+#plantIcon.milestone-growth-effect {
+  animation: milestone-growth-pulse 1500ms ease-out forwards;
+}
+#plantIcon.stage-1 { filter: hue-rotate(15deg) brightness(1.03) var(--ambient-light-filter, none); } 
+#plantIcon.stage-2 { filter: hue-rotate(30deg) brightness(1.06) var(--ambient-light-filter, none); }
+#plantIcon.stage-3 { filter: hue-rotate(45deg) brightness(1.09) var(--ambient-light-filter, none); }
+#plantIcon.stage-4 { filter: hue-rotate(60deg) brightness(1.12) var(--ambient-light-filter, none); }
+#plantIcon.stage-5 { filter: hue-rotate(75deg) brightness(1.15) var(--ambient-light-filter, none); }
+
+.resize-handle { position: absolute; background: transparent; z-index: 100;}
+.resize-handle.right { right: -5px; top: 0; bottom: 0; width: 10px; cursor: ew-resize;}
+.resize-handle.bottom { left: 0; right: 0; bottom: -5px; height: 10px; cursor: ns-resize;}
+.resize-handle.corner { right: -5px; bottom: -5px; width: 15px; height: 15px; cursor: nwse-resize;}
+.card-base.resizing * { pointer-events: none !important;}
+body.milestone-500-bg { background-image: linear-gradient(to bottom, #020111 10%, #0f0f30 50%, #23234d 80%, #383866 100%); color: #e0e0e0;}
+body.milestone-500-bg .card-base { --glass-bg: rgba(20, 20, 40, 0.75); --card-border-color: rgba(180, 180, 200, 0.29); box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2), 0 0 0 0.5px var(--card-border-color);}
+body.milestone-500-bg h1, body.milestone-500-bg h3, body.milestone-500-bg .info-block strong, body.milestone-500-bg .notification-textarea { color: #f0f0f5;}
+body.milestone-500-bg #notificationHeader #timeInfo, body.milestone-500-bg label { color: #b0b0c0;}
+body.milestone-500-bg #notificationHeader #timeInfo strong, body.milestone-500-bg .slider-value { color: var(--secondary); }
+body.milestone-500-bg #notificationHeader #timeInfo { background-color: color-mix(in srgb, var(--secondary) 10%, transparent); }
+body.milestone-500-bg .notification-textarea { --note-bg-color: rgba(30, 30, 50, 0.8); --note-text-color: #e0e0e0; border-color: rgba(180, 180, 200, 0.2);}
+body.milestone-500-bg .notification-textarea:focus { border-color: var(--secondary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary) 20%, transparent);}
+body.milestone-500-bg #ground { background: linear-gradient(to top, #1a2a1a, #2a4a2a);}
+body.milestone-500-bg button { background: var(--secondary); color: #1c1c1e;}
+body.milestone-500-bg button:hover:not(:disabled) { background-color: color-mix(in srgb, var(--secondary) 90%, black);}
+body.milestone-500-bg button:active:not(:disabled) { background-color: color-mix(in srgb, var(--secondary) 80%, black);}
+body.milestone-500-bg button:disabled { background: #555; color: #999;}
+body.milestone-500-bg #resetBtn { background: color-mix(in srgb, var(--bg-red) 80%, #333); }
+body.milestone-500-bg #resetBtn:hover:not(:disabled) { background: color-mix(in srgb, var(--bg-red) 70%, #333); }
+/* 暗色模式样式覆盖 */
+body.dark-mode {
+  /* 主要配色，参考 iOS 深色调 */
+  --primary: #0A84FF;
+  --secondary: #30B0F0;
+  --bg-red: #FF453A;
+  --bg-green: #34C759;
+  --bg-yellow: #FFC40C;
+  --bg-orange: #FF9F0A;
+  --text-color: #F2F2F7;
+  --text-color-light: #8E8E93;
+  --glass-bg: rgba(36, 36, 40, 0.8);
+  --card-border-color: rgba(84, 84, 88, 0.65);
+  --separator-color: rgba(84, 84, 88, 0.65);
+  background: #1c1c1e;
+}
+body.dark-mode .notification-textarea {
+  --note-bg-color: rgba(44, 44, 46, 0.9);
+  --note-text-color: #F2F2F7;
+}
+body.dark-mode .card-base {
+  background: var(--glass-bg);
+}
+body.dark-mode button {
+  color: #ffffff;
+}
+@keyframes subtle-pulse { 0% { filter: drop-shadow(0 0 12px gold) brightness(1); transform: scale(1) rotate(var(--final-rotation,0deg)); } 50% { filter: drop-shadow(0 0 20px gold) brightness(1.15); transform: scale(1.03) rotate(var(--final-rotation,0deg)); } 100% { filter: drop-shadow(0 0 12px gold) brightness(1); transform: scale(1) rotate(var(--final-rotation,0deg)); }}
+.milestone-item-500 { z-index: 10;}
+</style>
+</head>
+<body>
+  <div id="wrapper">
+    <div id="notification-board-card" class="card-base">
+        <div id="notificationHeader">
+            <h3><i class="fa-solid fa-clipboard"></i> 我的笔记/提醒</h3>
+            <div id="timeInfo" class="info-block"><strong id="currentTime">--:--:--</strong>&nbsp;⏰</div>
+        </div>
+        <div id="notificationAreaWrapper">
+             <textarea id="notificationTextarea1" class="notification-textarea" placeholder="记录笔记或提醒..."></textarea>
+        </div>
+        <div id="notificationSettings">
+            <label for="fontFamilySelect">字体:
+                 <select id="fontFamilySelect">
+                     <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'">系统默认 / San Francisco</option>
+                     <option value="'Noto Sans SC', Arial, sans-serif">Noto Sans SC</option>
+                     <option value="Arial, sans-serif">Arial</option>
+                     <option value="Verdana, sans-serif">Verdana</option>
+                     <option value="Tahoma, sans-serif">Tahoma</option>
+                     <option value="Georgia, serif">Georgia</option>
+                     <option value="'Times New Roman', serif">Times New Roman</option>
+                     <option value="'Courier New', monospace">Courier New</option>
+                 </select>
+            </label>
+            <label for="fontSizeSlider">字号:
+                <input type="range" id="fontSizeSlider" min="8" max="48" value="16" step="1" />
+                <span id="fontSizeVal" class="slider-value">16px</span>
+            </label>
+             <label for="textColorInput">文字颜色:
+                 <input type="color" id="textColorInput" value="#1c1c1e" />
+             </label>
+             <label for="bgColorInput">背景颜色:
+                 <input type="color" id="bgColorInput" value="#ffffff" />
+             </label>
+             <!-- 新增：夜间模式开关与导出笔记按钮 -->
+             <label for="darkModeToggle">夜间模式:
+                 <input type="checkbox" id="darkModeToggle" />
+             </label>
+             <button id="exportNotesBtn"><i class="fa-solid fa-download"></i> 导出笔记</button>
+        </div>
+    </div>
+    <div id="monitoring-card" class="card-base">
+      <h1><i class="fa-solid fa-volume-xmark"></i> 自习安静监测</h1>
+      <div id="meterContainer"><div id="meterBar"></div></div>
+      <div id="levelText">当前音量: 0</div>
+      <div id="controls">
+        <button id="startBtn"><i class="fa-solid fa-play"></i> 开始监测</button>
+        <button id="stopBtn" disabled><i class="fa-solid fa-stop"></i> 停止</button>
+        <!-- 新增：暂停/继续按钮 -->
+        <button id="pauseBtn" disabled><i class="fa-solid fa-pause"></i> 暂停</button>
+        <label>
+            <span>响度阈值</span><span id="thresholdValue" class="slider-value">20</span>
+            <input type="range" id="threshold" min="0" max="100" value="20" />
+        </label>
+        <label>
+            <span>灵敏度</span><span id="sensiValue" class="slider-value">1.6×</span>
+            <input type="range" id="sensitivity" min="0.5" max="5" step="0.1" value="1.6" />
+        </label>
+        <label>
+            <span>安静阈值</span><span id="quietVal" class="slider-value">30</span>
+            <input type="range" id="quietThres" min="10" max="100" value="30" />
+        </label>
+        <label>
+            <span>安静持续</span><span id="quietDurationVal" class="slider-value">5.0秒</span>
+            <input type="range" id="quietDuration" min="1000" max="10000" step="500" value="5000" />
+        </label>
+        <label>
+            <span>警报阈值</span><span id="alertVal" class="slider-value">80</span>
+            <input type="range" id="alertThres" min="0" max="100" value="80" />
+        </label>
+        <label>
+            <span>卡片缩放</span><span id="scaleVal" class="slider-value">1.2×</span>
+            <input type="range" id="cardScale" min="0.6" max="1.6" step="0.1" value="1.2" />
+        </label>
+        <button id="resetBtn"><i class="fa-solid fa-rotate-left"></i> 重置进度</button>
+      </div>
+      <div id="errorMsg"></div>
+      <div id="alertMessage">噪音过大! 请保持安静!</div>
+      <footer></footer>
+    </div>
+    <div id="plant-card" class="card-base">
+        <div id="ground"></div>
+        <div id="plantArea">
+             <div id="celestialObject"></div> <!-- Sun/Moon element -->
+             <div id="starsOverlay"></div> <!-- Stars container -->
+             <div id="rewardArea"></div>
+             <div id="snackRewardArea"></div>
+             <div id="plantIconContainer">
+                 <svg id="plantIcon" preserveAspectRatio="xMidYMax meet" viewBox="0 0 200 250"></svg>
+             </div>
+            <div id="plantWrapper">
+                 <div id="plantSelectorContainer">
+                    <label for="plantSelector"><i class="fa-solid fa-leaf"></i> 当前植物:</label>
+                    <select id="plantSelector"></select>
+                 </div>
+                 <div class="plant-info-row">
+                    <div id="quietCountInfo" class="info-block">专注次数: <strong id="quietCount">0</strong> ✨</div>
+                    <div id="totalTimeInfo" class="info-block">总专注: <strong id="totalFocusTime">0分钟</strong> ⏱️</div>
+                    <div id="streakInfo" class="info-block">连击: <strong id="quietStreak">0</strong>🔥</div>
+                 </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    // --- Code Refactor: Group elements into a single `dom` object for clarity ---
+    const dom = {
+        startBtn: document.getElementById("startBtn"),
+        stopBtn: document.getElementById("stopBtn"),
+        resetBtn: document.getElementById("resetBtn"),
+        meterBar: document.getElementById("meterBar"),
+        levelText: document.getElementById("levelText"),
+        thresholdSlider: document.getElementById("threshold"),
+        thresholdValueSpan: document.getElementById("thresholdValue"),
+        sensitivitySlider: document.getElementById("sensitivity"),
+        sensiValueSpan: document.getElementById("sensiValue"),
+        quietThresSlider: document.getElementById("quietThres"),
+        quietValSpan: document.getElementById("quietVal"),
+        quietDurationSlider: document.getElementById("quietDuration"),
+        quietDurationValSpan: document.getElementById("quietDurationVal"),
+        alertThresSlider: document.getElementById("alertThres"),
+        alertValSpan: document.getElementById("alertVal"),
+        alertMessageDiv: document.getElementById("alertMessage"),
+        wrapper: document.getElementById("wrapper"),
+        cardScaleSlider: document.getElementById("cardScale"),
+        scaleValSpan: document.getElementById("scaleVal"),
+        plantIconContainer: document.getElementById("plantIconContainer"),
+        plantIcon: document.getElementById("plantIcon"),
+        plantWrapper: document.getElementById("plantWrapper"),
+        quietCountSpan: document.getElementById("quietCount"),
+        totalFocusTimeSpan: document.getElementById("totalFocusTime"),
+        quietStreakSpan: document.getElementById("quietStreak"),
+        errorMsgDiv: document.getElementById("errorMsg"),
+        footer: document.querySelector('#monitoring-card footer'),
+        plantAreaEl: document.getElementById("plantArea"),
+        groundEl: document.getElementById("ground"),
+        bodyEl: document.body,
+        rewardAreaEl: document.getElementById("rewardArea"),
+        snackRewardAreaEl: document.getElementById("snackRewardArea"),
+        currentTimeSpan: document.getElementById("currentTime"),
+        notificationBoardCard: document.getElementById("notification-board-card"),
+        monitoringCard: document.getElementById("monitoring-card"),
+        plantCardEl: document.getElementById("plant-card"),
+        notificationTextarea1: document.getElementById("notificationTextarea1"),
+        fontFamilySelect: document.getElementById("fontFamilySelect"),
+        fontSizeSlider: document.getElementById("fontSizeSlider"),
+        fontSizeValSpan: document.getElementById("fontSizeVal"),
+        textColorInput: document.getElementById("textColorInput"),
+        bgColorInput: document.getElementById("bgColorInput"),
+        plantSelector: document.getElementById("plantSelector"),
+        celestialObjectEl: document.getElementById("celestialObject"),
+        starsOverlayEl: document.getElementById("starsOverlay"),
+        pauseBtn: document.getElementById("pauseBtn"),
+        exportNotesBtn: document.getElementById("exportNotesBtn"),
+        darkModeToggle: document.getElementById("darkModeToggle")
+    };
+
+    // --- Code Refactor: Group static configurations ---
+    const config = {
+        STORAGE_KEY: 'quietMonitorState_v12_dayNight',
+        ALERT_DELAY_MS: 750,
+        SESSIONS_PER_NEW_ITEM_TREE: 100,
+        completedItemTypes: [ { type: 'tree', icon: 'fa-tree', gradient: 'linear-gradient(to top, var(--completed-tree-green-dark), var(--completed-tree-green-light))', minSizeMultiplier: 0.9, maxSizeMultiplier: 1.1, baseSizeRem: 3 }, { type: 'rock', icon: 'fa-mountain', gradient: 'linear-gradient(to top, var(--completed-rock-color-dark), var(--completed-rock-color-light))', minSizeMultiplier: 0.8, maxSizeMultiplier: 1.2, baseSizeRem: 2 }, { type: 'flower', icon: 'fa-cannabis', gradient: 'linear-gradient(to top, var(--completed-flower-color-dark), var(--completed-flower-color-light))', minSizeMultiplier: 0.7, maxSizeMultiplier: 1.3, baseSizeRem: 1.5 }, ],
+        snackIcons: [ 'fa-lollipop', 'fa-pepper-hot', 'fa-bread-slice', 'fa-glass-water', 'fa-apple-whole', 'fa-lemon', 'fa-strawberry', 'fa-banana', 'fa-cookie-bite', 'fa-ice-cream', 'fa-pizza-slice', 'fa-hotdog', 'fa-burger', 'fa-fries', 'fa-donut', 'fa-pretzel', 'fa-mug-hot', 'fa-candy-cane', 'fa-cheese', 'fa-drumstick-bite', 'fa-candy', 'fa-gum', 'fa-bone', 'fa-seedling', 'fa-leaf', 'fa-droplet', 'fa-cloud', 'fa-sun', 'fa-heart', ],
+        snackColors: [ 'var(--snack-color-yellow)', 'var(--snack-color-red)', 'var(--snack-color-pink)', 'var(--snack-color-blue)', 'var(--snack-color-green)', '#AEAEB2', '#8E8E93', 'var(--bg-orange)', '#AF52DE', '#5AC8FA', '#FF9500', ],
+        defaultAreaSettings: { text: '', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'", fontSize: 15, textColor: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim(), bgColor: '#FFFFFF', },
+        treeSpecific: { trunkColor: '#5D4037', branchColor: '#795548', leafColors: ['#4CAF50', '#66BB6A', '#81C784', '#388E3C'], leafSize: 4, maxDepth: 6, appleColor: 'var(--bg-red)', appleSize: 4.5, seedlingStages: [ { progress: 0,  complexity: 1 }, { progress: 20, complexity: 2 }, { progress: 40, complexity: 3 }, { progress: 60, complexity: 4 }, { progress: 80, complexity: 5 } ], majorStageScales: { 0: 0.6, 1: 0.8, 2: 1.0, 3: 1.2 } },
+        plantDefinitions: {
+            'defaultTree': { id: 'defaultTree', displayName: '幸运树 🌳', type: 'proceduralTree', unlockQuietCount: 0, },
+            'happyFlower': { id: 'happyFlower', displayName: '开心小花 🌸', type: 'stagedIcon', unlockQuietCount: 10, stages: [ { minQuietCount: 0,   iconClass: 'fa-solid fa-seedling', color: '#a3e635', scale: 0.6, label: "种子" }, { minQuietCount: 5,   iconClass: 'fa-solid fa-leaf',    color: '#65a30d', scale: 0.8, label: "幼苗"}, { minQuietCount: 15,  iconClass: 'fa-solid fa-fan',     color: '#f472b6', scale: 1.0, label: "花苞" }, { minQuietCount: 30,  iconClass: 'fa-solid fa-sun',     color: '#ffcc00', scale: 1.2, label: "盛开" } ], baseIconSize: '70px', viewBox: '0 0 100 100' }
+        },
+        cachedCssVariables: {}
+    };
+
+    // --- Code Refactor: Group dynamic state ---
+    let appState = {
+        isMonitoring: false, isAlerting: false, isPaused: false,
+        quietCount: 0, totalFocusTimeMs: 0, quietStreak: 0, completedItemsData: [],
+        notificationArea: { ...config.defaultAreaSettings }, cardSizes: {}, milestone500Reached: false,
+        currentPlantId: 'defaultTree', unlockedPlantIds: ['defaultTree'], 
+        version: 12
+    };
+
+    let audio = {
+        context: null, analyser: null, microphone: null, stream: null, dataArray: null,
+        oscillator: null, gainNode: null, animationId: null,
+        quietStartTime: null, highNoiseStartTime: null, currentFocusSessionStartTime: null
+    };
+
+    // Performance: Cache slider values to avoid reading from DOM in the animation loop
+    let cachedThresholds = {};
+    let lastLevelText = '';
+
+    let dayNightIntervalId = null;
+
+
+    function createSvgElement(tag, attributes) { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const key in attributes) el.setAttribute(key, attributes[key]); return el; }
+    
+    function generateProceduralTree(svgElement, complexityLevel, majorGrowthStage = 0) {
+        svgElement.innerHTML = ''; 
+        // Performance: Use a DocumentFragment to batch DOM insertions
+        const fragment = document.createDocumentFragment();
+        const viewBoxWidth = 200; const viewBoxHeight = 250;
+        svgElement.setAttribute('viewBox', `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
+        dom.plantIcon.classList.remove('is-icon-type');
+
+        const startX = viewBoxWidth / 2; const startY = viewBoxHeight;
+        const stageBonusFactor = majorGrowthStage * 0.25;
+        const initialLength = 40 + complexityLevel * 4 + (majorGrowthStage * 6);
+        const initialThickness = 5.5 + complexityLevel * 0.8 + (majorGrowthStage * 1.8);
+        const calculatedMaxDepth = 2 + Math.floor(complexityLevel / 1.8) + majorGrowthStage;
+        const maxBranchDepth = Math.min(config.treeSpecific.maxDepth + majorGrowthStage, calculatedMaxDepth);
+        const branchFactor = 0.63 + Math.random() * 0.1 - (majorGrowthStage * 0.01);
+        const angleBase = 25 + Math.random() * 10 - (majorGrowthStage * 1.5);
+        const currentLeafSize = config.treeSpecific.leafSize + majorGrowthStage * 0.6;
+        const currentAppleSize = config.treeSpecific.appleSize + majorGrowthStage * 0.3;
+        const appleChance = majorGrowthStage >= 3 ? 0.30 : 0;
+
+        function drawBranch(x, y, angle, length, thickness, depth) {
+            if (depth > maxBranchDepth || length < (3 + stageBonusFactor*2) || thickness < (0.7 + stageBonusFactor*0.3)) {
+                const numLeaves = 1 + Math.floor(Math.random() * 2) + Math.floor(complexityLevel / 2.5) + Math.floor(majorGrowthStage * 1.5);
+                for (let i = 0; i < numLeaves; i++) {
+                    const randAngle = Math.random() * 2 * Math.PI;
+                    const randDist = Math.random() * currentLeafSize * 1.2;
+                    const leafOffsetX = Math.cos(randAngle) * randDist;
+                    const leafOffsetY = Math.sin(randAngle) * randDist * 0.8;
+                    if (majorGrowthStage >= 3 && Math.random() < appleChance && depth >= maxBranchDepth - 2 && length < initialLength * 0.3) {
+                        const apple = createSvgElement('circle', { cx: x + leafOffsetX, cy: y + leafOffsetY, r: Math.max(1.5, currentAppleSize * (0.85 + Math.random()*0.3)), fill: config.treeSpecific.appleColor, stroke: 'rgba(0,0,0,0.15)', 'stroke-width': 0.5, filter: 'drop-shadow(0.5px 0.5px 0.5px rgba(0,0,0,0.2))' });
+                        fragment.appendChild(apple);
+                    } else {
+                        const leaf = createSvgElement('circle', { cx: x + leafOffsetX, cy: y + leafOffsetY, r: Math.max(1.5, currentLeafSize - depth * 0.15 + Math.random() * 1.2), fill: config.treeSpecific.leafColors[Math.floor(Math.random() * config.treeSpecific.leafColors.length)], opacity: 0.7 + Math.random() * 0.3 });
+                        fragment.appendChild(leaf);
+                    }
+                }
+                return;
+            }
+            const endX = x - length * Math.sin(angle * Math.PI / 180); const endY = y - length * Math.cos(angle * Math.PI / 180);
+            const branchEl = createSvgElement('line', { x1: x, y1: y, x2: endX, y2: endY, stroke: depth <= 1 ? config.treeSpecific.trunkColor : config.treeSpecific.branchColor, 'stroke-width': Math.max(0.8, thickness), 'stroke-linecap': 'round' });
+            fragment.appendChild(branchEl);
+            const numNewBranches = thickness > (2.5 + stageBonusFactor) ? (Math.random() > (0.3 - stageBonusFactor*0.05) ? 2 : 3) : (Math.random() > 0.6 ? 2 : 1);
+            const angleVariation = angleBase * (1 + (depth / maxBranchDepth) * 0.4);
+            for (let i = 0; i < numNewBranches; i++) {
+                let sideAngle = (i % 2 === 0 ? 1 : -1) * angleVariation * (0.55 + Math.random() * 0.7);
+                if (numNewBranches === 1) sideAngle = (Math.random() - 0.5) * angleVariation * 0.4;
+                const newAngle = angle + sideAngle; const newLength = length * (branchFactor - Math.random() * 0.12); const newThickness = thickness * (0.6 + Math.random() * 0.15);
+                drawBranch(endX, endY, newAngle, newLength, newThickness, depth + 1);
+            }
+        }
+        drawBranch(startX, startY, 0, initialLength, initialThickness, 1);
+        svgElement.appendChild(fragment); // Single append operation
+    }
+    
+    function updatePlantVisuals() {
+        const plantId = appState.currentPlantId;
+        const plantDef = config.plantDefinitions[plantId];
+        if (!plantDef) { return; }
+
+        dom.plantIcon.innerHTML = ''; 
+        dom.plantIcon.classList.remove('is-icon-type');
+
+        if (plantDef.type === 'proceduralTree') {
+            dom.plantIcon.setAttribute('viewBox', '0 0 200 250'); 
+            const currentProgressInCycle = appState.quietCount % config.SESSIONS_PER_NEW_ITEM_TREE;
+            let complexityConfig = config.treeSpecific.seedlingStages[0];
+            for (let i = config.treeSpecific.seedlingStages.length - 1; i >= 0; i--) {
+                if (currentProgressInCycle >= config.treeSpecific.seedlingStages[i].progress) {
+                    complexityConfig = config.treeSpecific.seedlingStages[i]; break;
+                }
+            }
+            const interpolatedComplexity = complexityConfig.complexity;
+            let majorGrowthStage = 0;
+            if (appState.quietCount >= 300) majorGrowthStage = 3;
+            else if (appState.quietCount >= 200) majorGrowthStage = 2;
+            else if (appState.quietCount >= 100) majorGrowthStage = 1;
+            
+            const baseScale = config.treeSpecific.majorStageScales[majorGrowthStage] || 0.5;
+            dom.plantIcon.style.setProperty('--current-plant-scale', baseScale);
+
+            const lastComplexity = parseInt(dom.plantIcon.dataset.lastComplexity || "-1");
+            const lastMajorGrowthStage = parseInt(dom.plantIcon.dataset.lastMajorGrowthStage || "-1");
+
+            if (interpolatedComplexity !== lastComplexity || majorGrowthStage !== lastMajorGrowthStage || dom.plantIcon.innerHTML === '') {
+                 generateProceduralTree(dom.plantIcon, interpolatedComplexity, majorGrowthStage);
+                 dom.plantIcon.dataset.lastComplexity = interpolatedComplexity;
+                 dom.plantIcon.dataset.lastMajorGrowthStage = majorGrowthStage;
+            }
+        } else if (plantDef.type === 'stagedIcon') {
+            dom.plantIcon.classList.add('is-icon-type');
+            dom.plantIcon.setAttribute('viewBox', plantDef.viewBox || '0 0 100 100'); 
+            
+            let currentStage = plantDef.stages[0];
+            for (let i = plantDef.stages.length - 1; i >= 0; i--) {
+                if (appState.quietCount >= plantDef.stages[i].minQuietCount) {
+                    currentStage = plantDef.stages[i]; break;
+                }
+            }
+            
+            const foreignObject = createSvgElement('foreignObject', { x: '0', y: '0', width: '100%', height: '100%' });
+            const iconElement = document.createElement('i');
+            iconElement.className = `fa-plant-icon ${currentStage.iconClass}`; 
+            iconElement.style.color = currentStage.color;
+            if (plantDef.baseIconSize) iconElement.style.fontSize = plantDef.baseIconSize;
+            foreignObject.appendChild(iconElement);
+            dom.plantIcon.appendChild(foreignObject);
+            
+            dom.plantIcon.style.setProperty('--current-plant-scale', currentStage.scale);
+            dom.plantIcon.dataset.lastPlantStage = currentStage.iconClass;
+        }
+
+        if (appState.quietCount > 0 && !dom.plantIcon.classList.contains('milestone-growth-effect')) {
+            dom.plantIcon.classList.remove('growing');
+            requestAnimationFrame(() => {
+                dom.plantIcon.classList.add('growing');
+                dom.plantIcon.addEventListener('animationend', () => dom.plantIcon.classList.remove('growing'), { once: true });
+            });
+        }
+    }
+
+    function triggerMilestoneGrowthAnimation(stage) { 
+        dom.plantIcon.classList.remove('growing', 'blooming', 'milestone-growth-effect');
+        dom.plantIconContainer.classList.remove('success-glow');
+
+        requestAnimationFrame(() => {
+            dom.plantIcon.classList.add('milestone-growth-effect');
+            dom.plantIconContainer.classList.add('success-glow');
+        });
+        
+        const plantDef = config.plantDefinitions[appState.currentPlantId];
+        let message = "植物成长了！"; 
+        if (plantDef && plantDef.id === 'defaultTree') {
+             const milestoneMessages = ["小树获得了养分！", "小树更强壮了！", "小树茁壮成长！"];
+             message = milestoneMessages[stage-1] || "小树成长了！";
+             if (stage === 3) message = "小树长出苹果啦！🍎";
+        } else if (plantDef && plantDef.id === 'happyFlower') {
+            const flowerStages = plantDef.stages;
+            let currentFlowerStageLabel = "";
+            for (let s of flowerStages) {
+                if (appState.quietCount >= s.minQuietCount) currentFlowerStageLabel = s.label; else break;
+            }
+             message = `小花${currentFlowerStageLabel}了！🌼`;
+        }
+        
+        const indicator = document.createElement('div');
+        indicator.classList.add('quiet-indicator'); indicator.textContent = message;
+        indicator.style.color = 'var(--bg-green)'; indicator.style.fontSize = '1.25rem'; indicator.style.fontWeight = '600';
+        const plantIconContainerRect = dom.plantIconContainer.getBoundingClientRect();
+        const plantAreaRect = dom.plantAreaEl.getBoundingClientRect();
+        const initialX = (plantIconContainerRect.left - plantAreaRect.left) + plantIconContainerRect.width / 2;
+        const initialY = (plantIconContainerRect.top - plantAreaRect.top) - 40;
+        indicator.style.left = `${initialX}px`; indicator.style.top = `${initialY}px`;
+        indicator.style.animationDuration = `${Math.max(1500, config.cachedCssVariables.indicatorDuration * 1.2)}ms`;
+        dom.plantAreaEl.appendChild(indicator);
+        indicator.addEventListener('animationend', () => indicator.remove(), { once: true });
+
+        const animationEffectDuration = 1500;
+        setTimeout(() => dom.plantIcon.classList.remove('milestone-growth-effect'), animationEffectDuration);
+        setTimeout(() => dom.plantIconContainer.classList.remove('success-glow'), config.cachedCssVariables.successGlowDuration > animationEffectDuration ? config.cachedCssVariables.successGlowDuration : animationEffectDuration);
+    }
+
+    function populatePlantSelector() {
+        dom.plantSelector.innerHTML = '';
+        appState.unlockedPlantIds.forEach(plantId => {
+            const definition = config.plantDefinitions[plantId];
+            if (definition) {
+                const option = document.createElement('option');
+                option.value = plantId; option.textContent = definition.displayName;
+                if (plantId === appState.currentPlantId) option.selected = true;
+                dom.plantSelector.appendChild(option);
+            }
+        });
+    }
+
+    function checkPlantUnlocks() {
+        let newUnlock = false;
+        for (const plantId in config.plantDefinitions) {
+            if (!appState.unlockedPlantIds.includes(plantId)) {
+                const plantDef = config.plantDefinitions[plantId];
+                if (appState.quietCount >= plantDef.unlockQuietCount) {
+                    appState.unlockedPlantIds.push(plantId); newUnlock = true;
+                    const unlockMsg = document.createElement('div');
+                    unlockMsg.classList.add('quiet-indicator'); unlockMsg.textContent = `新植物已解锁: ${plantDef.displayName}!`;
+                    unlockMsg.style.color = 'var(--primary)'; unlockMsg.style.top = '20px'; 
+                    unlockMsg.style.animationDuration = '2500ms';
+                    dom.plantAreaEl.appendChild(unlockMsg);
+                    unlockMsg.addEventListener('animationend', () => unlockMsg.remove(), {once: true});
+                }
+            }
+        }
+        if (newUnlock) { populatePlantSelector(); saveState(); }
+    }
+
+    
+    function updateBackgroundByTime() {
+        const hour = new Date().getHours();
+        const rootStyle = document.documentElement.style;
+
+        // Clear previous stars if any
+        dom.starsOverlayEl.innerHTML = ''; 
+
+        if (hour >= 5 && hour < 7) { // Dawn 5-7
+            rootStyle.setProperty('--sky-gradient-top', '#FFACAC');
+            rootStyle.setProperty('--sky-gradient-middle', '#FFDAB9');
+            rootStyle.setProperty('--sky-gradient-bottom', '#ADD8E6');
+            rootStyle.setProperty('--sun-moon-color', '#FFFACD');
+            rootStyle.setProperty('--sun-moon-glow', 'rgba(255, 236, 139, 0.6)');
+            rootStyle.setProperty('--ambient-light-filter', 'brightness(0.85) sepia(0.1)');
+            rootStyle.setProperty('--ground-tint-overlay', 'rgba(255, 218, 185, 0.1)');
+            rootStyle.setProperty('--celestial-object-opacity', '0.8');
+            rootStyle.setProperty('--celestial-object-top', '40%');
+            rootStyle.setProperty('--celestial-object-left', '15%');
+            rootStyle.setProperty('--stars-opacity', '0.1');
+            generateStars(20);
+        } else if (hour >= 7 && hour < 17) { // Day 7-17
+            rootStyle.setProperty('--sky-gradient-top', '#87CEEB');
+            rootStyle.setProperty('--sky-gradient-middle', '#B0E0E6');
+            rootStyle.setProperty('--sky-gradient-bottom', '#ADD8E6');
+            rootStyle.setProperty('--sun-moon-color', '#FFD700');
+            rootStyle.setProperty('--sun-moon-glow', 'rgba(255, 215, 0, 0.5)');
+            rootStyle.setProperty('--ambient-light-filter', 'brightness(1)');
+            rootStyle.setProperty('--ground-tint-overlay', 'rgba(255, 255, 255, 0.05)');
+            rootStyle.setProperty('--celestial-object-opacity', '1');
+            const dayProgress = (hour - 7) / (17 - 7);
+            rootStyle.setProperty('--celestial-object-top', `${40 - dayProgress * 30}%`);
+            rootStyle.setProperty('--celestial-object-left', `${15 + dayProgress * 70}%`);
+            rootStyle.setProperty('--stars-opacity', '0');
+        } else if (hour >= 17 && hour < 19) { // Dusk 17-19
+            rootStyle.setProperty('--sky-gradient-top', '#FF7F50');
+            rootStyle.setProperty('--sky-gradient-middle', '#FFA07A');
+            rootStyle.setProperty('--sky-gradient-bottom', '#4682B4');
+            rootStyle.setProperty('--sun-moon-color', '#FFB6C1');
+            rootStyle.setProperty('--sun-moon-glow', 'rgba(255, 105, 97, 0.5)');
+            rootStyle.setProperty('--ambient-light-filter', 'brightness(0.8) sepia(0.15)');
+            rootStyle.setProperty('--ground-tint-overlay', 'rgba(255, 127, 80, 0.15)');
+            rootStyle.setProperty('--celestial-object-opacity', '0.9');
+            rootStyle.setProperty('--celestial-object-top', '45%');
+            rootStyle.setProperty('--celestial-object-left', '85%');
+            rootStyle.setProperty('--stars-opacity', '0.3');
+            generateStars(30);
+        } else { // Night (19 - 5)
+            rootStyle.setProperty('--sky-gradient-top', '#000030');
+            rootStyle.setProperty('--sky-gradient-middle', '#0a0a45'); 
+            rootStyle.setProperty('--sky-gradient-bottom', '#191970');
+            rootStyle.setProperty('--sun-moon-color', '#F5F5F5');
+            rootStyle.setProperty('--sun-moon-glow', 'rgba(220, 220, 220, 0.4)');
+            rootStyle.setProperty('--ambient-light-filter', 'brightness(0.65) contrast(0.9)');
+            rootStyle.setProperty('--ground-tint-overlay', 'rgba(25, 25, 112, 0.3)');
+            rootStyle.setProperty('--celestial-object-opacity', '0.9');
+            const nightProgress = (hour >= 19 ? hour - 19 : hour + 5) / 10;
+            rootStyle.setProperty('--celestial-object-top', `${40 - nightProgress * 30}%`);
+            rootStyle.setProperty('--celestial-object-left', `${15 + nightProgress * 70}%`);
+            rootStyle.setProperty('--stars-opacity', '1');
+            generateStars(70);
+        }
+    }
+    
+    function generateStars(count) {
+        // Performance: Use DocumentFragment for batch DOM insertion
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < count; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.top = `${Math.random() * 100}%`;
+            const size = Math.random() * 2 + 0.5;
+            star.style.width = `${size}px`;
+            star.style.height = `${size}px`;
+            star.style.animationDelay = `${Math.random() * 2}s`;
+            fragment.appendChild(star);
+        }
+        dom.starsOverlayEl.appendChild(fragment);
+    }
+
+    function cacheCssVariables() { const rootStyle = getComputedStyle(document.documentElement); config.cachedCssVariables.wiggleDuration = parseFloat(rootStyle.getPropertyValue('--cached-wiggle-duration')) || 400; config.cachedCssVariables.noiseShakeDuration = parseFloat(rootStyle.getPropertyValue('--cached-noise-shake-duration')) || 200; config.cachedCssVariables.drinkAnimationDuration = parseFloat(rootStyle.getPropertyValue('--cached-drink-animation-duration')) || 500; config.cachedCssVariables.successGlowDuration = parseFloat(rootStyle.getPropertyValue('--cached-success-glow-duration')) || 800; config.cachedCssVariables.indicatorDuration = parseFloat(rootStyle.getPropertyValue('--cached-indicator-duration')) || 1200; config.cachedCssVariables.growInDuration = parseFloat(rootStyle.getPropertyValue('--cached-grow-in-duration')) || 800; config.cachedCssVariables.rewardDuration = parseFloat(rootStyle.getPropertyValue('--cached-reward-duration')) || 1500; config.cachedCssVariables.starSplashDuration = parseFloat(rootStyle.getPropertyValue('--cached-star-splash-duration')) || 1200; config.cachedCssVariables.alertFlashDuration = parseFloat(rootStyle.getPropertyValue('--cached-alert-flash-duration')) || 300; config.cachedCssVariables.streakAnimationDuration = parseFloat(rootStyle.getPropertyValue('--cached-streak-animation-duration')) || 1000; config.cachedCssVariables.quietGlowDuration = parseFloat(rootStyle.getPropertyValue('--cached-quiet-glow-duration')) || 1500; config.cachedCssVariables.snackFloatDuration = parseFloat(rootStyle.getPropertyValue('--cached-snack-float-duration')) || 1800; config.cachedCssVariables.waterDropletDuration = parseFloat(rootStyle.getPropertyValue('--cached-water-droplet-duration')) || 1800; const particleColors = [ rootStyle.getPropertyValue('--plant-green-light').trim(), rootStyle.getPropertyValue('--completed-tree-green-light').trim(), rootStyle.getPropertyValue('--completed-rock-color-light').trim(), rootStyle.getPropertyValue('--completed-flower-color-light').trim(), rootStyle.getPropertyValue('--snack-color-yellow').trim(), rootStyle.getPropertyValue('--snack-color-red').trim(), rootStyle.getPropertyValue('--snack-color-pink').trim(), rootStyle.getPropertyValue('--snack-color-blue').trim(), rootStyle.getPropertyValue('--snack-color-green').trim(), '#AEAEB2', '#8E8E93', 'var(--bg-orange)', '#AF52DE', '#5AC8FA', ]; config.cachedCssVariables.particleColors = [...new Set(particleColors.filter(color => color && color !== 'transparent' && color !== 'none').map(color => color.toLowerCase() ))]; if (config.cachedCssVariables.particleColors.length === 0) config.cachedCssVariables.particleColors = ['#4ade80', '#ffcc00', '#007aff']; config.cachedCssVariables.quietGlowSpread = parseFloat(rootStyle.getPropertyValue('--quiet-glow-spread').replace('px', '')) || 0; config.cachedCssVariables.quietGlowBlur = parseFloat(rootStyle.getPropertyValue('--quiet-glow-blur').replace('px', '')) || 0;}
+    function playBeep(duration = 0.15, frequency = 660, volume = 0.4) { if (!appState.isMonitoring || !audio.context || audio.context.state !== 'running') return; if (audio.oscillator) { try { audio.oscillator.stop(); } catch(e) {} finally { if (audio.oscillator) audio.oscillator.disconnect(); if (audio.gainNode) audio.gainNode.disconnect(); audio.oscillator = null; audio.gainNode = null; }} try { audio.oscillator = audio.context.createOscillator(); audio.gainNode = audio.context.createGain(); audio.oscillator.connect(audio.gainNode); if (audio.context.destination) { audio.gainNode.connect(audio.context.destination); } else { if (audio.oscillator) audio.oscillator.disconnect(); if (audio.gainNode) audio.gainNode.disconnect(); audio.oscillator = null; audio.gainNode = null; return; } audio.oscillator.type = 'sine'; audio.oscillator.frequency.setValueAtTime(frequency, audio.context.currentTime); audio.gainNode.gain.setValueAtTime(volume, audio.context.currentTime); audio.oscillator.start(); audio.oscillator.stop(audio.context.currentTime + duration); audio.oscillator.onended = () => { if (audio.oscillator) audio.oscillator.disconnect(); if (audio.gainNode) audio.gainNode.disconnect(); audio.oscillator = null; audio.gainNode = null; }; } catch (e) { if (audio.oscillator) audio.oscillator.disconnect(); if (audio.gainNode) audio.gainNode.disconnect(); audio.oscillator = null; audio.gainNode = null; }}
+    function formatTime(ms) { const totalSeconds = Math.floor(ms / 1000); const totalMinutes = Math.floor(totalSeconds / 60); const seconds = totalSeconds % 60; if (totalMinutes >= 60) { const hours = Math.floor(totalMinutes / 60); const minutes = totalMinutes % 60; let timeString = `${hours}小时`; if (minutes > 0) timeString += `${minutes}分钟`; if (seconds > 0 && (hours * 3600 + minutes * 60 + seconds) % 60 !== 0) { if (minutes > 0) timeString += `${seconds}秒`; else timeString = `${hours}小时${seconds}秒`; } else if (totalSeconds < 60 && seconds > 0) timeString = `${seconds}秒`; else if (totalSeconds === 0) timeString = `0秒`; return timeString; } else if (totalMinutes > 0) { let timeString = `${totalMinutes}分钟`; if (seconds > 0 || totalSeconds < 60) timeString += `${seconds}秒`; if (seconds === 0 && totalSeconds >= 60) return `${totalMinutes}分钟`; return timeString; } else return `${totalSeconds}秒`;}
+    function updateClock() { const now = new Date(); const h = now.getHours().toString().padStart(2, '0'); const m = now.getMinutes().toString().padStart(2, '0'); const s = now.getSeconds().toString().padStart(2, '0'); dom.currentTimeSpan.textContent = `${h}:${m}:${s}`; }
+    function updateSliderValues(updateCache = false) { 
+        // --- NOTE: HTML was updated. The label text and value span are now siblings of the input. ---
+        dom.thresholdValueSpan.textContent = dom.thresholdSlider.value; 
+        dom.sensiValueSpan.textContent = parseFloat(dom.sensitivitySlider.value).toFixed(1) + '×'; 
+        dom.quietValSpan.textContent = dom.quietThresSlider.value; 
+        const durSec = (parseInt(dom.quietDurationSlider.value, 10) / 1000).toFixed(1); 
+        dom.quietDurationValSpan.textContent = durSec + '秒'; 
+        dom.alertValSpan.textContent = dom.alertThresSlider.value; 
+        dom.scaleValSpan.textContent = parseFloat(dom.cardScaleSlider.value).toFixed(1) + '×'; 
+        if (dom.footer) dom.footer.textContent = `专注+1: 音量 ≤ ${dom.quietThresSlider.value} 持续 ${durSec}s。警报: 音量 ≥ ${dom.alertThresSlider.value} 持续 ${config.ALERT_DELAY_MS/1000}s。`; 
+        dom.totalFocusTimeSpan.textContent = formatTime(appState.totalFocusTimeMs); 
+        dom.quietCountSpan.textContent = appState.quietCount; 
+        dom.quietStreakSpan.textContent = appState.quietStreak; 
+        if (updateCache) { 
+            cachedThresholds = { 
+                threshold: parseInt(dom.thresholdSlider.value, 10), 
+                sensitivity: parseFloat(dom.sensitivitySlider.value), 
+                quiet: parseInt(dom.quietThresSlider.value, 10), 
+                quietDuration: parseInt(dom.quietDurationSlider.value, 10), 
+                alert: parseInt(dom.alertThresSlider.value, 10), 
+            }; 
+        }
+    }
+    function applyCardScale() { const scale = dom.cardScaleSlider.value; dom.wrapper.style.setProperty('--card-scale', scale); dom.scaleValSpan.textContent = parseFloat(scale).toFixed(1) + '×';}
+    function applyNotificationSettings() { const areaSettings = appState.notificationArea; const textareaElement = dom.notificationTextarea1; if (!areaSettings || !textareaElement) return; textareaElement.style.setProperty('--note-font-size', `${areaSettings.fontSize}px`); textareaElement.style.setProperty('--note-font-family', areaSettings.fontFamily); textareaElement.style.setProperty('--note-text-color', areaSettings.textColor); textareaElement.style.setProperty('--note-bg-color', areaSettings.bgColor); dom.fontFamilySelect.value = areaSettings.fontFamily; dom.fontSizeSlider.value = areaSettings.fontSize; dom.fontSizeValSpan.textContent = areaSettings.fontSize + 'px'; dom.textColorInput.value = areaSettings.textColor; dom.bgColorInput.value = areaSettings.bgColor;}
+    
+    function updatePlantAppearanceAndUnlocks() {
+        checkPlantUnlocks(); 
+        updatePlantVisuals();   
+        updateBackgroundByTime(); // Update background based on time
+
+        const rewardContainer = dom.snackRewardAreaEl || dom.bodyEl;
+        const waterDropletInterval = 10;
+        if (appState.quietCount > 0 && appState.quietCount % waterDropletInterval === 0) {
+            const id = 'water-' + appState.quietCount;
+            if (!rewardContainer.querySelector('#' + id)) createWaterDroplet(id);
+        }
+
+        const stageFilterInterval = 30;
+        const currentFilterStage = Math.floor(appState.quietCount / stageFilterInterval);
+        for (let i = 1; i <= 20; i++) dom.plantIcon.classList.remove('stage-' + i); 
+        if (config.plantDefinitions[appState.currentPlantId]?.type === 'proceduralTree') { 
+            if (currentFilterStage > 0) {
+                 dom.plantIcon.classList.add('stage-' + currentFilterStage);
+            }
+        }
+
+        if (appState.quietCount > 0 && appState.quietCount % config.SESSIONS_PER_NEW_ITEM_TREE === 0) { 
+            const multiple = appState.quietCount;
+            if (!appState.completedItemsData.find(item => item.multiple === multiple && !item.isSpecialMilestone)) {
+                createCompletedItemDataAndElement(multiple);
+            }
+        }
+        if (appState.quietCount >= 500 && !appState.milestone500Reached) {
+            appState.milestone500Reached = true;
+            dom.bodyEl.classList.add('milestone-500-bg');
+            createSpecialMilestoneItem();
+            saveState();
+        }
+    }
+
+    function addCompletedItemElement(itemData, addElementOnly = false) { const item = document.createElement('i'); item.classList.add('fas', 'completed-item', `type-${itemData.type}`); item.dataset.multiple = itemData.multiple; const itemConfig = config.completedItemTypes.find(c => c.type === itemData.type); if (!itemConfig) return null; item.classList.add(itemConfig.icon); item.style.background = itemConfig.gradient; item.style['-webkit-background-clip'] = 'text'; item.style['background-clip'] = 'text'; item.style['-webkit-text-fill-color'] = 'transparent'; item.style.fontSize = `${itemData.sizeMultiplier * itemConfig.baseSizeRem}rem`; item.style.left = `${itemData.x}px`; item.style.top = `${itemData.y}px`; item.style.setProperty('--final-rotation', `${itemData.rotation}deg`); dom.rewardAreaEl.appendChild(item); if (!addElementOnly) { item.style.opacity = 0; const initialAnimRotation = (Math.random() - 0.5) * 90; item.style.setProperty('--initial-random-rotation', `${initialAnimRotation}deg`); requestAnimationFrame(() => { item.classList.add('grow-in'); item.addEventListener('animationend', () => item.classList.remove('grow-in'), { once: true }); }); } else { item.style.opacity = 1; item.style.animation = 'none'; item.style.setProperty('--initial-random-rotation', `${itemData.rotation}deg`); } return item;}
+    function createCompletedItemDataAndElement(multiple) { const itemTypes = config.completedItemTypes; const typeIndex = (Math.floor(multiple / config.SESSIONS_PER_NEW_ITEM_TREE) - 1) % itemTypes.length; const itemConfig = itemTypes[typeIndex >= 0 ? typeIndex : 0]; const plantAreaRect = dom.plantAreaEl.getBoundingClientRect(); const paddingTopPx = parseFloat(getComputedStyle(dom.plantAreaEl).paddingTop); const paddingLeftPx = parseFloat(getComputedStyle(dom.plantAreaEl).paddingLeft); const paddingRightPx = parseFloat(getComputedStyle(dom.plantAreaEl).paddingRight); const plantAreaHeight = plantAreaRect.height; const groundHeightPercent = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ground-height-percent')) / 100; const groundHeightPx = plantAreaHeight * groundHeightPercent; const maxUsableYRelativeToPlantAreaTop = plantAreaHeight - groundHeightPx; const minUsableYRelativeToPlantAreaTop = paddingTopPx; const usableHeight = maxUsableYRelativeToPlantAreaTop - minUsableYRelativeToPlantAreaTop; const availableWidth = plantAreaRect.width - paddingLeftPx - paddingRightPx; const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize); const itemApproxSizePx = itemConfig.maxSizeMultiplier * itemConfig.baseSizeRem * rootFontSize; const numItemsExpected = Math.floor(appState.quietCount / config.SESSIONS_PER_NEW_ITEM_TREE); const index = appState.completedItemsData.filter(it => !it.isSpecialMilestone).length; let targetXRelativeToPadding = availableWidth * (index + 0.5) / (numItemsExpected + 1 > 0 ? numItemsExpected + 1 : 1); let finalX = paddingLeftPx + targetXRelativeToPadding + (Math.random() - 0.5) * (availableWidth * 0.15); const horizontalMargin = itemApproxSizePx * 0.4; finalX = Math.max(paddingLeftPx + horizontalMargin, Math.min(plantAreaRect.width - paddingRightPx - horizontalMargin, finalX)); const groundOffsetAboveGroundLine = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--plant-base-offset-from-ground')) || 10; const maxYInUsableAreaRelativeToPlantAreaTop = maxUsableYRelativeToPlantAreaTop - groundOffsetAboveGroundLine; const randomYVal = Math.random(); const verticalFactor = Math.pow(randomYVal, 1.5); let finalY = minUsableYRelativeToPlantAreaTop + verticalFactor * usableHeight; finalY = Math.min(finalY, maxYInUsableAreaRelativeToPlantAreaTop); finalY = Math.max(finalY, minUsableYRelativeToPlantAreaTop); const randomSizeMultiplier = itemConfig.minSizeMultiplier + Math.random() * (itemConfig.maxSizeMultiplier - itemConfig.minSizeMultiplier); const randomRotation = (Math.random() - 0.5) * 50; const newItemData = { type: itemConfig.type, multiple: multiple, x: finalX, y: finalY, sizeMultiplier: randomSizeMultiplier, rotation: randomRotation }; appState.completedItemsData.push(newItemData); appState.completedItemsData.sort((a, b) => a.multiple - b.multiple); const newItemElement = addCompletedItemElement(newItemData); if (newItemElement) { createRewardShower(newItemElement); if (!dom.plantIcon.classList.contains('blooming')) { dom.plantIcon.classList.add('blooming'); dom.plantIcon.addEventListener('animationend', () => dom.plantIcon.classList.remove('blooming'), { once: true }); }} saveState();}
+    function createSpecialMilestoneItem() { if (dom.rewardAreaEl.querySelector('.milestone-item-500')) return; const item = document.createElement('i'); item.classList.add('fas', 'fa-star', 'completed-item', 'milestone-item-500'); item.style.fontSize = '5rem'; item.style.position = 'absolute'; const plantAreaRect = dom.plantAreaEl.getBoundingClientRect(); const paddingLeft = parseFloat(getComputedStyle(dom.plantAreaEl).paddingLeft); const paddingTop = parseFloat(getComputedStyle(dom.plantAreaEl).paddingTop); item.style.left = `${paddingLeft + (plantAreaRect.width - paddingLeft * 2) / 2 - (5*16/2)}px`; item.style.top = `${paddingTop + 30}px`; item.style.background = 'radial-gradient(circle, rgba(255,223,100,1) 0%, rgba(255,204,0,1) 40%, rgba(255,153,0,0.8) 100%)'; item.style['-webkit-background-clip'] = 'text'; item.style['background-clip'] = 'text'; item.style['-webkit-text-fill-color'] = 'transparent'; item.style.filter = 'drop-shadow(0 0 15px gold)'; item.style.setProperty('--final-rotation', '0deg'); item.style.setProperty('--initial-random-rotation', '-30deg'); dom.rewardAreaEl.appendChild(item); item.style.opacity = 0; requestAnimationFrame(() => { item.classList.add('grow-in'); item.addEventListener('animationend', () => { item.classList.remove('grow-in'); item.style.animation = 'subtle-pulse 3s infinite ease-in-out alternate'; }, { once: true });}); const specialItemData = { type: 'milestone_star', multiple: 50000, x: parseFloat(item.style.left), y: parseFloat(item.style.top), sizeMultiplier: 5 / 3, rotation: 0, isSpecialMilestone: true }; if (!appState.completedItemsData.find(d => d.isSpecialMilestone)) appState.completedItemsData.push(specialItemData); }
+    function renderCompletedItems() { dom.rewardAreaEl.innerHTML = ''; appState.completedItemsData.forEach(itemData => { if (itemData.isSpecialMilestone) { if (!dom.rewardAreaEl.querySelector('.milestone-item-500')) { const item = document.createElement('i'); item.classList.add('fas', 'fa-star', 'completed-item', 'milestone-item-500'); item.style.fontSize = `${itemData.sizeMultiplier * 3}rem`; item.style.position = 'absolute'; item.style.left = `${itemData.x}px`; item.style.top = `${itemData.y}px`; item.style.background = 'radial-gradient(circle, rgba(255,223,100,1) 0%, rgba(255,204,0,1) 40%, rgba(255,153,0,0.8) 100%)'; item.style['-webkit-background-clip'] = 'text'; item.style['background-clip'] = 'text'; item.style['-webkit-text-fill-color'] = 'transparent'; item.style.filter = 'drop-shadow(0 0 15px gold)'; item.style.transform = `rotate(${itemData.rotation}deg)`; item.style.opacity = 1; item.style.animation = 'subtle-pulse 3s infinite ease-in-out alternate'; dom.rewardAreaEl.appendChild(item);}} else { addCompletedItemElement(itemData, true); }});}
+    function createSnackReward() { const snack = document.createElement('i'); const randomIconClass = config.snackIcons[Math.floor(Math.random() * config.snackIcons.length)]; snack.classList.add('fas', 'snack-reward', randomIconClass); const randomColor = config.snackColors[Math.floor(Math.random() * config.snackColors.length)]; snack.style.color = randomColor; const randomSizeMultiplier = 0.8 + Math.random() * 0.6; snack.style.fontSize = `${randomSizeMultiplier * 1.6}rem`; const snackAreaRect = dom.snackRewardAreaEl.getBoundingClientRect(); const snackAreaWidth = snackAreaRect.width; const snackAreaHeight = snackAreaRect.height; const plantIconContainerRect = dom.plantIconContainer.getBoundingClientRect(); const plantCenterXRelativeToSnackArea = (plantIconContainerRect.left - snackAreaRect.left) + plantIconContainerRect.width / 2; const plantCenterYRelativeToSnackArea = (plantIconContainerRect.top - snackAreaRect.top) + plantIconContainerRect.height / 2; const plantRadiusApprox = Math.max(plantIconContainerRect.width, plantIconContainerRect.height) / 2; const paddingLeft = parseFloat(getComputedStyle(dom.snackRewardAreaEl).paddingLeft); const paddingTop = parseFloat(getComputedStyle(dom.snackRewardAreaEl).paddingTop); const paddingRight = parseFloat(getComputedStyle(dom.snackRewardAreaEl).paddingRight); const paddingBottom = parseFloat(getComputedStyle(dom.snackRewardAreaEl).paddingBottom); const usableAreaX1 = paddingLeft; const usableAreaY1 = paddingTop; const usableAreaX2 = snackAreaWidth - paddingRight; const usableAreaY2 = snackAreaHeight - paddingBottom; let randomX, randomY; let attempts = 0; const maxAttempts = 50; const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize); const approxSnackSizePx = randomSizeMultiplier * 1.6 * rootFontSize; const buffer = approxSnackSizePx * 0.5; const extraPlantBuffer = 20; const safeRadius = plantRadiusApprox * 1.5 + buffer + extraPlantBuffer; let distanceToPlant; do { randomX = usableAreaX1 + Math.random() * (usableAreaX2 - usableAreaX1); randomY = usableAreaY1 + Math.random() * (usableAreaY2 - usableAreaY1); distanceToPlant = Math.sqrt( Math.pow(randomX - plantCenterXRelativeToSnackArea, 2) + Math.pow(randomY - plantCenterYRelativeToSnackArea, 2) ); attempts++; } while (distanceToPlant < safeRadius && attempts < maxAttempts); if (attempts >= maxAttempts) { randomX = usableAreaX1 + (usableAreaX2 - usableAreaX1) * Math.random(); randomY = usableAreaY1 + (usableAreaY2 - usableAreaY1) * 0.1; } snack.style.left = `${Math.max(usableAreaX1 + buffer, Math.min(usableAreaX2 - buffer, randomX))}px`; snack.style.top = `${Math.max(usableAreaY1 + buffer, Math.min(usableAreaY2 - buffer, randomY))}px`; snack.style.transform = `translate(-50%, -50%) rotate(${Math.random() * 360}deg)`; snack.style.setProperty('--float-distance-y', `${-(30 + Math.random() * 40)}px`); snack.style.setProperty('--rotate-end', `${(Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 360)}deg`); dom.snackRewardAreaEl.appendChild(snack); requestAnimationFrame(() => snack.classList.add('float-fade')); snack.addEventListener('animationend', () => snack.remove(), { once: true });}
+    function createWaterDroplet(id) { const droplet = document.createElement('i'); droplet.id = id; droplet.classList.add('fas', 'fa-droplet', 'water-droplet', 'float-fade'); const containerRect = dom.snackRewardAreaEl.getBoundingClientRect(); const containerWidth = containerRect.width; const containerHeight = containerRect.height; const paddingLeft = parseFloat(getComputedStyle(dom.snackRewardAreaEl).paddingLeft); const paddingTop = parseFloat(getComputedStyle(dom.snackRewardAreaEl).paddingTop); const paddingRight = parseFloat(getComputedStyle(dom.snackRewardAreaEl).paddingRight); const randomX = paddingLeft + Math.random() * (containerWidth - paddingLeft - paddingRight); const randomY = paddingTop + Math.random() * (containerHeight * 0.4 - paddingTop); droplet.style.left = `${randomX}px`; droplet.style.top = `${randomY}px`; droplet.style.animationDuration = `${config.cachedCssVariables.waterDropletDuration}ms`; dom.snackRewardAreaEl.appendChild(droplet); droplet.addEventListener('animationend', () => droplet.remove(), { once: true });}
+    function createStarSplash() { const splash = document.createElement('i'); splash.classList.add('fas', 'fa-star', 'starSplash'); const plantIconContainerRect = dom.plantIconContainer.getBoundingClientRect(); const plantAreaRect = dom.plantAreaEl.getBoundingClientRect(); const initialXRelativeToPlantArea = (plantIconContainerRect.left - plantAreaRect.left) + plantIconContainerRect.width / 2; const initialYRelativeToPlantArea = (plantIconContainerRect.top - plantAreaRect.top) - 15; splash.style.left = `${initialXRelativeToPlantArea}px`; splash.style.top = `${initialYRelativeToPlantArea}px`; splash.style.animationDuration = `${config.cachedCssVariables.starSplashDuration}ms`; dom.plantAreaEl.appendChild(splash); splash.addEventListener('animationend', () => splash.remove(), { once: true });}
+    function createQuietIndicator() { const indicator = document.createElement('div'); indicator.classList.add('quiet-indicator'); indicator.textContent = '+1 专注'; const plantIconContainerRect = dom.plantIconContainer.getBoundingClientRect(); const plantAreaRect = dom.plantAreaEl.getBoundingClientRect(); const initialXRelativeToPlantArea = (plantIconContainerRect.left - plantAreaRect.left) + plantIconContainerRect.width / 2; const initialYRelativeToPlantArea = (plantIconContainerRect.top - plantAreaRect.top) - 25; indicator.style.left = `${initialXRelativeToPlantArea}px`; indicator.style.top = `${initialYRelativeToPlantArea}px`; indicator.style.animationDuration = `${config.cachedCssVariables.indicatorDuration}ms`; dom.plantAreaEl.appendChild(indicator); indicator.addEventListener('animationend', () => indicator.remove(), { once: true });}
+    function createStreakBonusIndicator(streak) { const indicator = document.createElement('div'); indicator.classList.add('streak-bonus'); indicator.textContent = `🔥 x${streak} 连击!`; const plantIconContainerRect = dom.plantIconContainer.getBoundingClientRect(); const plantAreaRect = dom.plantAreaEl.getBoundingClientRect(); const initialXRelativeToPlantArea = (plantIconContainerRect.left - plantAreaRect.left) + plantIconContainerRect.width / 2; const initialYRelativeToPlantArea = (plantIconContainerRect.top - plantAreaRect.top) - 50; indicator.style.left = `${initialXRelativeToPlantArea}px`; indicator.style.top = `${initialYRelativeToPlantArea}px`; indicator.style.animationDuration = `${config.cachedCssVariables.streakAnimationDuration}ms`; dom.plantAreaEl.appendChild(indicator); indicator.addEventListener('animationend', () => indicator.remove(), { once: true });}
+    function addPlantDrinkAnimation() { dom.plantIcon.classList.remove('drinking'); requestAnimationFrame(() => { dom.plantIcon.classList.add('drinking'); setTimeout(() => dom.plantIcon.classList.remove('drinking'), config.cachedCssVariables.drinkAnimationDuration); });}
+    function addSuccessGlowAnimation() { dom.plantIconContainer.classList.remove('success-glow'); requestAnimationFrame(() => { dom.plantIconContainer.classList.add('success-glow'); setTimeout(() => dom.plantIconContainer.classList.remove('success-glow'), config.cachedCssVariables.successGlowDuration); });}
+    function addWiggleAnimation(element) { element.classList.remove('wiggle'); requestAnimationFrame(() => element.classList.add('wiggle')); setTimeout(() => element.classList.remove('wiggle'), config.cachedCssVariables.wiggleDuration);}
+    function addNoiseShakeAnimation(element) { if (!element.classList.contains('noise-shake')) element.classList.add('noise-shake');}
+    function removeNoiseShakeAnimation(element) { if (element.classList.contains('noise-shake')) element.classList.remove('noise-shake');}
+    function addMeterPulseAnimation(element) { element.classList.add('pulse'); setTimeout(() => element.classList.remove('pulse'), 300); }
+    function updateQuietGlow(volume) { const isQuiet = volume < cachedThresholds.quiet; if (isQuiet && !appState.isAlerting) { dom.plantAreaEl.classList.add('quiet-glow'); const glowFactor = (cachedThresholds.quiet > 0) ? (1 - (volume / cachedThresholds.quiet)) : 0; const maxSpread = 40; const maxBlur = 60; const currentSpread = glowFactor * maxSpread; const currentBlur = glowFactor * maxBlur; dom.plantAreaEl.style.setProperty('--quiet-glow-spread', `${currentSpread}px`); dom.plantAreaEl.style.setProperty('--quiet-glow-blur', `${currentBlur}px`); } else { dom.plantAreaEl.classList.remove('quiet-glow'); dom.plantAreaEl.style.setProperty('--quiet-glow-spread', `0px`); dom.plantAreaEl.style.setProperty('--quiet-glow-blur', `0px`); }}
+    function createRewardShower(fromElement) { if (!fromElement) fromElement = dom.plantIconContainer; const particleCount = 12; const particleIcons = ['fa-leaf', 'fa-star', 'fa-spa', 'fa-heart']; const particleColors = config.cachedCssVariables.particleColors || ['#34c759', '#ffcc00', '#007aff']; const fromRect = fromElement.getBoundingClientRect(); const plantAreaRect = dom.plantAreaEl.getBoundingClientRect(); const fromCenterXRelativeToPlantArea = (fromRect.left - plantAreaRect.left) + fromRect.width / 2; const fromCenterYRelativeToPlantArea = (fromRect.top - plantAreaRect.top) + fromRect.height * 0.3; for (let i = 0; i < particleCount; i++) { const particle = document.createElement('i'); const randomIconClass = particleIcons[Math.floor(Math.random() * particleIcons.length)]; particle.classList.add('fas', randomIconClass, 'reward-particle'); const randomColor = particleColors[Math.floor(Math.random() * particleColors.length)]; particle.style.color = randomColor; const startX = fromCenterXRelativeToPlantArea + (Math.random() - 0.5) * fromRect.width * 0.5; const startY = fromCenterYRelativeToPlantArea - (Math.random() * fromRect.height * 0.2); particle.style.left = `${startX}px`; particle.style.top = `${startY}px`; const fallDistanceX = (Math.random() - 0.5) * 150; const fallDistanceY = 100 + Math.random() * 150; const endRotation = (Math.random() - 0.5) * 720 + (Math.random() > 0.5 ? 180 : -180); particle.style.setProperty('--fall-distance-x', `${fallDistanceX}px`); particle.style.setProperty('--fall-distance-y', `${fallDistanceY}px`); particle.style.setProperty('--end-rotation', `${endRotation}deg`); const delay = Math.random() * 400; const duration = config.cachedCssVariables.rewardDuration + Math.random() * 600; particle.style.animationDelay = `${delay}ms`; particle.style.animationDuration = `${duration}ms`; particle.style.animationTimingFunction = 'ease-out'; const initialRotation = Math.random() * 360; particle.style.transform = `rotate(${initialRotation}deg)`; dom.plantAreaEl.appendChild(particle); particle.addEventListener('animationend', () => particle.remove(), { once: true }); }}
+    function startAlert() { if (appState.isAlerting) return; appState.isAlerting = true; dom.wrapper.classList.add('alert'); dom.alertMessageDiv.classList.add('visible'); playBeep(0.2, 780, 0.6); if (audio.currentFocusSessionStartTime !== null) { const duration = performance.now() - audio.currentFocusSessionStartTime; appState.totalFocusTimeMs += duration; audio.currentFocusSessionStartTime = null; dom.totalFocusTimeSpan.textContent = formatTime(appState.totalFocusTimeMs); saveState(); } if (audio.quietStartTime !== null) audio.quietStartTime = null; if (appState.quietStreak > 0) { appState.quietStreak = 0; dom.quietStreakSpan.textContent = appState.quietStreak; saveState(); } dom.plantAreaEl.classList.remove('quiet-glow'); removeNoiseShakeAnimation(dom.plantIcon);}
+    function stopAlert() { if (!appState.isAlerting) return; appState.isAlerting = false; dom.wrapper.classList.remove('alert'); dom.alertMessageDiv.classList.remove('visible'); dom.wrapper.style.animation = ''; dom.wrapper.style.borderColor = ''; dom.wrapper.style.boxShadow = ''; if (audio.oscillator) { try { audio.oscillator.stop(); } catch(e) {} finally { if (audio.oscillator) audio.oscillator.disconnect(); if (audio.gainNode) audio.gainNode.disconnect(); audio.oscillator = null; audio.gainNode = null; }}}
+    
+    function processAudio() {
+        if (!appState.isMonitoring || !audio.context || audio.context.state !== 'running' || !audio.analyser || !audio.dataArray) {
+            if (audio.animationId) { cancelAnimationFrame(audio.animationId); audio.animationId = null; }
+            return;
+        }
+        try {
+            audio.analyser.getByteFrequencyData(audio.dataArray);
+            let sum = 0;
+            const bufferLength = audio.analyser.frequencyBinCount;
+            for (let i = 0; i < bufferLength; i++) sum += audio.dataArray[i];
+            const average = sum / bufferLength;
+            let volume = (average / 255) * 100 * cachedThresholds.sensitivity;
+            volume = Math.min(100, Math.max(0, volume));
+            
+            dom.meterBar.style.width = volume + '%';
+            const newLevelText = `当前音量: ${Math.round(volume)}`;
+            if(newLevelText !== lastLevelText) {
+                dom.levelText.textContent = newLevelText;
+                lastLevelText = newLevelText;
+            }
+
+            const currentTime = performance.now();
+
+            if (!dom.meterBar.classList.contains('pulse')) {
+                dom.meterBar.classList.remove('above-threshold', 'below-quiet-threshold', 'above-alert-threshold');
+                if (volume >= cachedThresholds.alert) dom.meterBar.classList.add('above-alert-threshold');
+                else if (volume >= cachedThresholds.quiet) dom.meterBar.classList.add('above-threshold');
+                else dom.meterBar.classList.add('below-quiet-threshold');
+            }
+
+            if (volume >= cachedThresholds.alert) {
+                if (audio.highNoiseStartTime === null) audio.highNoiseStartTime = currentTime;
+                if (!appState.isAlerting && currentTime - audio.highNoiseStartTime >= config.ALERT_DELAY_MS) startAlert();
+                if (!appState.isAlerting) addNoiseShakeAnimation(dom.plantIcon);
+            } else {
+                audio.highNoiseStartTime = null;
+                if (appState.isAlerting) stopAlert();
+                removeNoiseShakeAnimation(dom.plantIcon);
+            }
+
+            if (!appState.isAlerting) {
+                if (volume < cachedThresholds.quiet) {
+                    updateQuietGlow(volume);
+                    if (audio.quietStartTime === null) audio.quietStartTime = currentTime;
+                    else {
+                        const sessionDuration = currentTime - audio.quietStartTime;
+                        if (sessionDuration >= cachedThresholds.quietDuration) {
+                            const prevQuietCount = appState.quietCount;
+                            appState.quietCount++;
+                            appState.quietStreak++;
+
+                            createStarSplash(); createQuietIndicator(); createSnackReward();
+                            addWiggleAnimation(dom.plantIcon); addPlantDrinkAnimation(); addSuccessGlowAnimation();
+                            addMeterPulseAnimation(dom.meterBar);
+
+                            if (appState.quietStreak > 0 && appState.quietStreak % 10 === 0) {
+                                createStreakBonusIndicator(appState.quietStreak);
+                            }
+                            
+                            let milestoneReachedStage = 0; 
+                            const plantDef = config.plantDefinitions[appState.currentPlantId];
+                            if (plantDef?.type === 'proceduralTree') {
+                                if (appState.quietCount >= 300 && prevQuietCount < 300) milestoneReachedStage = 3;
+                                else if (appState.quietCount >= 200 && prevQuietCount < 200) milestoneReachedStage = 2;
+                                else if (appState.quietCount >= 100 && prevQuietCount < 100) milestoneReachedStage = 1;
+                            } else if (plantDef?.type === 'stagedIcon') {
+                                let prevStageIdx = -1, currentStageIdx = -1;
+                                for(let i=0; i < plantDef.stages.length; ++i) {
+                                    if(prevQuietCount >= plantDef.stages[i].minQuietCount) prevStageIdx = i;
+                                    if(appState.quietCount >= plantDef.stages[i].minQuietCount) currentStageIdx = i;
+                                }
+                                if (currentStageIdx > prevStageIdx) milestoneReachedStage = currentStageIdx + 1;
+                            }
+
+                            if (milestoneReachedStage > 0) triggerMilestoneGrowthAnimation(milestoneReachedStage);
+                            
+                            dom.quietCountSpan.textContent = appState.quietCount;
+                            dom.quietStreakSpan.textContent = appState.quietStreak;
+                            updatePlantAppearanceAndUnlocks(); 
+                            audio.quietStartTime = null;
+                            saveState();
+                        }
+                    }
+                    if (audio.currentFocusSessionStartTime === null) audio.currentFocusSessionStartTime = currentTime;
+                } else { 
+                    updateQuietGlow(volume);
+                    if (audio.quietStartTime !== null) audio.quietStartTime = null;
+                    if (audio.currentFocusSessionStartTime !== null) {
+                        const duration = currentTime - audio.currentFocusSessionStartTime;
+                        appState.totalFocusTimeMs += duration;
+                        audio.currentFocusSessionStartTime = null;
+                        dom.totalFocusTimeSpan.textContent = formatTime(appState.totalFocusTimeMs);
+                        saveState();
+                    }
+                    if (appState.quietStreak > 0) {
+                        appState.quietStreak = 0;
+                        dom.quietStreakSpan.textContent = appState.quietStreak;
+                        saveState();
+                    }
+                }
+            }
+        } catch (e) {
+            dom.errorMsgDiv.textContent = `监测出错: ${e.message}. 已停止。请刷新。`;
+            stopMonitoring(); return;
+        }
+        audio.animationId = requestAnimationFrame(processAudio);
+    }
+    function handleStreamEnded() { if (appState.isMonitoring) { dom.errorMsgDiv.textContent = "麦克风中断。请检查设置后重试。"; stopMonitoring(); }}
+    async function startMonitoring() { if (appState.isMonitoring) return; dom.errorMsgDiv.textContent = ""; dom.startBtn.disabled = true; dom.stopBtn.disabled = true; dom.resetBtn.disabled = true; if (!audio.context || audio.context.state === 'closed') { audio.context = new (window.AudioContext || window.webkitAudioContext)(); } if (audio.context.state === 'suspended') { try { await audio.context.resume(); } catch(e) { dom.errorMsgDiv.textContent = `无法恢复音频: ${e.message}.`; dom.startBtn.disabled = false; dom.resetBtn.disabled = false; return; }} try { if (audio.stream) { audio.stream.getTracks().forEach(track => track.stop()); audio.stream = null; } audio.stream = await navigator.mediaDevices.getUserMedia({ audio: true }); if (audio.stream) { audio.stream.removeEventListener('ended', handleStreamEnded); audio.stream.removeEventListener('inactive', handleStreamEnded); audio.stream.addEventListener('ended', handleStreamEnded); audio.stream.addEventListener('inactive', handleStreamEnded); } if (audio.context.state === 'suspended') { await audio.context.resume(); } if (audio.microphone) { audio.microphone.disconnect(); audio.microphone = null; } if (audio.analyser) audio.analyser = null; audio.dataArray = null; audio.microphone = audio.context.createMediaStreamSource(audio.stream); audio.analyser = audio.context.createAnalyser(); audio.analyser.fftSize = 2048; audio.analyser.smoothingTimeConstant = 0.8; audio.dataArray = new Uint8Array(audio.analyser.frequencyBinCount); audio.microphone.connect(audio.analyser); appState.isMonitoring = true; audio.quietStartTime = null; audio.highNoiseStartTime = null; audio.currentFocusSessionStartTime = performance.now(); if (audio.animationId) cancelAnimationFrame(audio.animationId); updateSliderValues(true); lastLevelText = ''; audio.animationId = requestAnimationFrame(processAudio); dom.stopBtn.disabled = false; dom.startBtn.disabled = true; dom.resetBtn.disabled = true; } catch (err) { let friendlyError = "无法开始监测。请检查:\n"; if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") friendlyError += "1. 浏览器麦克风权限是否允许？\n2. 系统麦克风权限是否开启？"; else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") friendlyError += "1. 未找到麦克风设备。"; else if (err.name === "NotReadableError") friendlyError += "1. 麦克风可能被其他应用占用或硬件问题。"; else if (err.name === "SecurityError") friendlyError += "1. 安全限制 (如非HTTPS页面)。"; else friendlyError += `未知错误: ${err.message || err.name}`; dom.errorMsgDiv.textContent = friendlyError; stopMonitoring(); }}
+    
+    function stopMonitoring() {
+        if (!appState.isMonitoring && !audio.stream && !audio.context) {
+            dom.startBtn.disabled = false; dom.stopBtn.disabled = true; dom.resetBtn.disabled = false;
+            return;
+        }
+        
+        appState.isMonitoring = false;
+    
+        if (audio.animationId) {
+            cancelAnimationFrame(audio.animationId);
+            audio.animationId = null;
+        }
+    
+        if (audio.currentFocusSessionStartTime !== null) {
+            const duration = performance.now() - audio.currentFocusSessionStartTime;
+            appState.totalFocusTimeMs += duration;
+            audio.currentFocusSessionStartTime = null;
+            dom.totalFocusTimeSpan.textContent = formatTime(appState.totalFocusTimeMs);
+        }
+    
+        audio.quietStartTime = null;
+        audio.highNoiseStartTime = null;
+        if (appState.quietStreak > 0) {
+            appState.quietStreak = 0;
+            dom.quietStreakSpan.textContent = appState.quietStreak;
+        }
+        
+        saveState();
+    
+        if (audio.stream) {
+            audio.stream.removeEventListener('ended', handleStreamEnded);
+            audio.stream.removeEventListener('inactive', handleStreamEnded);
+            audio.stream.getTracks().forEach(track => {
+                try { track.stop(); } catch (e) { console.warn("Error stopping media track:", e); }
+            });
+            audio.stream = null;
+        }
+    
+        stopAlert();
+        dom.plantAreaEl.classList.remove('quiet-glow');
+        removeNoiseShakeAnimation(dom.plantIcon);
+    
+        if (audio.microphone) {
+            try { audio.microphone.disconnect(); } catch (e) { console.warn("Error disconnecting microphone node:", e); }
+            audio.microphone = null;
+        }
+        audio.analyser = null;
+        audio.dataArray = null;
+    
+        if (audio.context && audio.context.state !== 'closed') {
+            audio.context.close().catch(e => {
+                console.warn("Harmless error during AudioContext close:", e.message);
+            });
+        }
+        audio.context = null;
+    
+        dom.startBtn.disabled = false;
+        dom.stopBtn.disabled = true;
+        dom.resetBtn.disabled = false;
+        // 停止监测时禁用暂停按钮并重置其文本
+        if (dom.pauseBtn) {
+            dom.pauseBtn.disabled = true;
+            dom.pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> 暂停';
+        }
+        appState.isPaused = false;
+        dom.meterBar.style.width = '0%';
+        dom.levelText.textContent = '当前音量: 0';
+        dom.meterBar.classList.remove('above-threshold', 'below-quiet-threshold', 'above-alert-threshold', 'pulse');
+        
+        updateSliderValues();
+        updatePlantAppearanceAndUnlocks();
+    }
+
+    function makeResizable(element, minWidth, minHeight) { const handles = {}; ['right', 'bottom', 'corner'].forEach(type => { const handle = document.createElement('div'); handle.classList.add('resize-handle', type); element.appendChild(handle); handles[type] = handle; }); let startX, startY, startWidth, startHeight, isDragging = false; function startDrag(e, handleType) { e.preventDefault(); e.stopPropagation(); isDragging = true; startX = e.clientX; startY = e.clientY; startWidth = element.offsetWidth; startHeight = element.offsetHeight; element.classList.add('resizing'); dom.bodyEl.classList.add('resizing'); element.style.flex = 'none'; document.addEventListener('mousemove', drag); document.addEventListener('mouseup', stopDrag); element.dataset.resizeHandleType = handleType;} function drag(e) { if (!isDragging) return; const handleType = element.dataset.resizeHandleType; const deltaX = e.clientX - startX; const deltaY = e.clientY - startY; let newWidth = startWidth; let newHeight = startHeight; if (handleType.includes('right') || handleType.includes('corner')) newWidth = startWidth + deltaX; if (handleType.includes('bottom') || handleType.includes('corner')) newHeight = startHeight + deltaY; newWidth = Math.max(newWidth, minWidth); newHeight = Math.max(newHeight, minHeight); element.style.width = newWidth + 'px'; element.style.height = newHeight + 'px';} function stopDrag() { if (!isDragging) return; isDragging = false; element.classList.remove('resizing'); dom.bodyEl.classList.remove('resizing'); document.removeEventListener('mousemove', drag); document.removeEventListener('mouseup', stopDrag); delete element.dataset.resizeHandleType; saveState();} handles.right.addEventListener('mousedown', (e) => startDrag(e, 'right')); handles.bottom.addEventListener('mousedown', (e) => startDrag(e, 'bottom')); handles.corner.addEventListener('mousedown', (e) => startDrag(e, 'corner'));}
+    
+    function debounce(func, delay) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); };}
+    const debouncedSaveState = debounce(saveState, 1000);
+
+    /**
+     * 导出笔记为文本文件
+     * 将笔记区域的内容保存到本地文件，文件名含有时间戳。
+     */
+    function exportNotes() {
+        const text = dom.notificationTextarea1.value || '';
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const timestamp = new Date().toISOString().replace(/[:T]/g, '-').replace(/\..+/, '');
+        const filename = 'study-notes-' + timestamp + '.txt';
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }, 0);
+    }
+
+    /**
+     * 设置暗色模式
+     * @param {boolean} isOn 当为 true 时启用暗色模式，false 时关闭
+     */
+    function setDarkMode(isOn) {
+        if (isOn) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+        try {
+            localStorage.setItem('studyMonitorDarkMode', isOn ? 'true' : 'false');
+        } catch (e) {
+            // 忽略本地存储错误
+        }
+    }
+
+    /**
+     * 读取暗色模式偏好
+     * 从 localStorage 中读取用户的暗色模式开关并应用
+     */
+    function loadDarkMode() {
+        let pref = null;
+        try {
+            pref = localStorage.getItem('studyMonitorDarkMode');
+        } catch (e) {
+            // 忽略错误
+        }
+        const isOn = (pref === 'true');
+        setDarkMode(isOn);
+        if (dom.darkModeToggle) {
+            dom.darkModeToggle.checked = isOn;
+        }
+    }
+
+    /**
+     * 暂停/恢复监测
+     * 点击该按钮时切换暂停和继续监测，不重置进度
+     */
+    function togglePauseMonitoring() {
+        // 如果未在监测，则不处理
+        if (!appState.isMonitoring) return;
+        if (!appState.isPaused) {
+            // 暂停监测
+            if (audio.context && audio.context.state === 'running') {
+                audio.context.suspend().catch(() => {});
+            }
+            // 累计当前会话的专注时间
+            if (audio.currentFocusSessionStartTime !== null) {
+                const duration = performance.now() - audio.currentFocusSessionStartTime;
+                appState.totalFocusTimeMs += duration;
+                audio.currentFocusSessionStartTime = null;
+                dom.totalFocusTimeSpan.textContent = formatTime(appState.totalFocusTimeMs);
+            }
+            appState.isPaused = true;
+            dom.pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i> 继续';
+        } else {
+            // 恢复监测
+            if (audio.context && audio.context.state === 'suspended') {
+                audio.context.resume().catch(() => {});
+            }
+            audio.currentFocusSessionStartTime = performance.now();
+            appState.isPaused = false;
+            dom.pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> 暂停';
+        }
+        saveState();
+    }
+    function saveState() {
+        const cardSizes = {};
+        [dom.notificationBoardCard, dom.monitoringCard, dom.plantCardEl].forEach(card => {
+            if (card.style.width && card.style.height && card.style.flex === 'none') {
+                cardSizes[card.id] = { width: card.style.width, height: card.style.height };
+            }
+        });
+        appState.notificationArea.text = dom.notificationTextarea1.value;
+        const stateToSave = {
+            quietCount: appState.quietCount, totalFocusTimeMs: appState.totalFocusTimeMs,
+            quietStreak: appState.quietStreak, completedItemsData: appState.completedItemsData,
+            cardSizes: cardSizes, version: appState.version, milestone500Reached: appState.milestone500Reached,
+            currentPlantId: appState.currentPlantId, unlockedPlantIds: appState.unlockedPlantIds,
+            settings: {
+                threshold: dom.thresholdSlider.value, sensitivity: dom.sensitivitySlider.value,
+                quietThres: dom.quietThresSlider.value, quietDuration: dom.quietDurationSlider.value,
+                alertThres: dom.alertThresSlider.value, cardScale: dom.cardScaleSlider.value,
+                notificationArea: appState.notificationArea
+            }
+        };
+        try { localStorage.setItem(config.STORAGE_KEY, JSON.stringify(stateToSave)); } catch (e) { console.error("Error saving state:", e); }
+    }
+    function loadState() {
+        try {
+            const savedState = localStorage.getItem(config.STORAGE_KEY);
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                appState.quietCount = state.quietCount || 0;
+                appState.totalFocusTimeMs = state.totalFocusTimeMs || 0;
+                appState.quietStreak = state.quietStreak || 0;
+                appState.milestone500Reached = state.milestone500Reached || false;
+                appState.completedItemsData.length = 0;
+                if (state.completedItemsData && Array.isArray(state.completedItemsData)) {
+                    state.completedItemsData.forEach(item => {
+                        if (item.type && typeof item.multiple === 'number' && typeof item.x === 'number' && typeof item.y === 'number' && typeof item.rotation === 'number') {
+                            const sizeMultiplier = (item.sizeMultiplier !== undefined && typeof item.sizeMultiplier === 'number') ? item.sizeMultiplier : 1.0;
+                            appState.completedItemsData.push({ ...item, sizeMultiplier });
+                        }
+                    });
+                    appState.completedItemsData.sort((a, b) => a.multiple - b.multiple);
+                }
+
+                appState.currentPlantId = state.currentPlantId || 'defaultTree';
+                appState.unlockedPlantIds = Array.isArray(state.unlockedPlantIds) && state.unlockedPlantIds.length > 0 ? state.unlockedPlantIds : ['defaultTree'];
+                if (!appState.unlockedPlantIds.includes(appState.currentPlantId)) {
+                    appState.currentPlantId = appState.unlockedPlantIds[0] || 'defaultTree';
+                }
+
+                if (state.settings) {
+                    dom.thresholdSlider.value = state.settings.threshold || 20;
+                    dom.sensitivitySlider.value = state.settings.sensitivity || 1.6;
+                    dom.quietThresSlider.value = state.settings.quietThres || 30;
+                    dom.quietDurationSlider.value = state.settings.quietDuration || 5000;
+                    dom.alertThresSlider.value = state.settings.alertThres || 80;
+                    dom.cardScaleSlider.value = state.settings.cardScale || 1.2;
+                    appState.notificationArea = { ...config.defaultAreaSettings, ...(state.settings.notificationArea || {}) };
+                    dom.notificationTextarea1.value = appState.notificationArea.text;
+                }
+                if (state.cardSizes) {
+                    appState.cardSizes = state.cardSizes;
+                    [dom.notificationBoardCard, dom.monitoringCard, dom.plantCardEl].forEach(card => {
+                        const savedSize = state.cardSizes[card.id];
+                        if (savedSize && savedSize.width && savedSize.height) {
+                            card.style.width = savedSize.width; card.style.height = savedSize.height; card.style.flex = 'none';
+                        }
+                    });
+                }
+                if (appState.milestone500Reached) dom.bodyEl.classList.add('milestone-500-bg');
+            }
+        } catch (e) {
+            dom.errorMsgDiv.textContent = "加载进度失败。将使用默认设置。";
+            // Reset to default if loading fails
+            handleReset(false); // Pass false to skip confirmation
+        }
+    }
+    function handleReset(confirmReset = true) {
+        if (confirmReset && !confirm('确定重置所有进度和设置吗？此操作无法撤销。')) {
+            return;
+        }
+        
+        if (appState.isMonitoring) stopMonitoring();
+
+        appState = {
+            isMonitoring: false, isAlerting: false, isPaused: false,
+            quietCount: 0, totalFocusTimeMs: 0, quietStreak: 0, completedItemsData: [],
+            notificationArea: { ...config.defaultAreaSettings }, cardSizes: {}, milestone500Reached: false,
+            currentPlantId: 'defaultTree', unlockedPlantIds: ['defaultTree'], version: 12
+        };
+        
+        dom.bodyEl.classList.remove('milestone-500-bg');
+        dom.thresholdSlider.value = 20; dom.sensitivitySlider.value = 1.6; dom.quietThresSlider.value = 30;
+        dom.quietDurationSlider.value = 5000; dom.alertThresSlider.value = 80; dom.cardScaleSlider.value = 1.2;
+        dom.notificationTextarea1.value = appState.notificationArea.text;
+        
+        [dom.notificationBoardCard, dom.monitoringCard, dom.plantCardEl].forEach(card => {
+            card.style.width = ''; card.style.height = ''; card.style.flex = '';
+        });
+        
+        localStorage.removeItem(config.STORAGE_KEY);
+        dom.snackRewardAreaEl.innerHTML = '';
+        dom.errorMsgDiv.textContent = confirmReset ? "进度已重置。" : "";
+
+        // 重置后刷新暂停按钮状态
+        if (dom.pauseBtn) {
+            dom.pauseBtn.disabled = true;
+            dom.pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> 暂停';
+        }
+        appState.isPaused = false;
+
+        // Re-initialize UI based on fresh state
+        populatePlantSelector();
+        updateSliderValues(true); // update cache as well
+        applyCardScale();
+        renderCompletedItems();
+        updatePlantAppearanceAndUnlocks();
+        applyNotificationSettings();
+    }
+    
+    function initEventListeners() {
+        // 使用包装函数，启动监测后启用暂停按钮
+        dom.startBtn.addEventListener('click', async () => {
+            await startMonitoring();
+            if (appState.isMonitoring) {
+                dom.pauseBtn.disabled = false;
+                dom.pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> 暂停';
+                appState.isPaused = false;
+            }
+        });
+        dom.stopBtn.addEventListener('click', stopMonitoring);
+        dom.resetBtn.addEventListener('click', () => handleReset(true));
+
+        [dom.thresholdSlider, dom.quietThresSlider, dom.sensitivitySlider, dom.quietDurationSlider, dom.alertThresSlider, dom.cardScaleSlider].forEach(slider => {
+            slider.addEventListener('input', () => {
+                updateSliderValues(true); // Update cache on input
+                if (slider.id === 'cardScale') {
+                    applyCardScale();
+                }
+                debouncedSaveState();
+            });
+        });
+        
+        dom.fontFamilySelect.addEventListener('change', () => { appState.notificationArea.fontFamily = dom.fontFamilySelect.value; applyNotificationSettings(); debouncedSaveState(); });
+        dom.fontSizeSlider.addEventListener('input', () => { appState.notificationArea.fontSize = parseInt(dom.fontSizeSlider.value, 10); applyNotificationSettings(); debouncedSaveState(); });
+        dom.textColorInput.addEventListener('input', () => { appState.notificationArea.textColor = dom.textColorInput.value; applyNotificationSettings(); debouncedSaveState(); });
+        dom.bgColorInput.addEventListener('input', () => { appState.notificationArea.bgColor = dom.bgColorInput.value; applyNotificationSettings(); debouncedSaveState(); });
+        dom.notificationTextarea1.addEventListener('input', debouncedSaveState);
+        
+        dom.plantSelector.addEventListener('change', (event) => {
+            appState.currentPlantId = event.target.value;
+            updatePlantVisuals(); 
+            saveState();
+        });
+
+        // 新增事件监听：暂停按钮、导出笔记、暗色模式
+        dom.pauseBtn.addEventListener('click', togglePauseMonitoring);
+        dom.exportNotesBtn.addEventListener('click', exportNotes);
+        if (dom.darkModeToggle) {
+            dom.darkModeToggle.addEventListener('change', () => {
+                setDarkMode(dom.darkModeToggle.checked);
+            });
+        }
+        
+        window.addEventListener('beforeunload', () => { if (appState.isMonitoring) stopMonitoring(); else saveState(); });
+    }
+
+    function initApp() {
+        cacheCssVariables(); 
+        const minSizes = { 'notification-board-card': { minWidth: 300, minHeight: 250 }, 'monitoring-card': { minWidth: 450, minHeight: 400 }, 'plant-card': { minWidth: 450, minHeight: 400 }}; 
+        makeResizable(dom.notificationBoardCard, minSizes['notification-board-card'].minWidth, minSizes['notification-board-card'].minHeight); 
+        makeResizable(dom.monitoringCard, minSizes['monitoring-card'].minWidth, minSizes['monitoring-card'].minHeight); 
+        makeResizable(dom.plantCardEl, minSizes['plant-card'].minWidth, minSizes['plant-card'].minHeight); 
+        
+        loadState();
+        // 应用用户首选的暗色模式
+        loadDarkMode();
+        populatePlantSelector();
+        updateSliderValues(true); // Initial cache population
+        applyCardScale();
+        renderCompletedItems();
+        updatePlantAppearanceAndUnlocks();
+        applyNotificationSettings();
+        
+        initEventListeners();
+
+        updateClock(); 
+        setInterval(updateClock, 1000);
+        
+        if(dayNightIntervalId) clearInterval(dayNightIntervalId);
+        dayNightIntervalId = setInterval(updateBackgroundByTime, 5 * 60 * 1000); // Every 5 minutes
+    }
+
+    window.addEventListener('load', initApp);
+  </script>
+</body>
+</html>
